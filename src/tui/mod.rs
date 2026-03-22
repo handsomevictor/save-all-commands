@@ -15,11 +15,18 @@ use std::io;
 use crate::store::Store;
 
 pub fn run_tui(store: Store) -> Result<Option<String>> {
-    // Set up terminal
+    // Render TUI on stderr, not stdout.
+    //
+    // The shell integration captures stdout: result=$(command sac "$@" 2>/dev/tty)
+    // Stderr is redirected to the real TTY so the TUI is visible on the terminal.
+    // Stdout stays clean so only the selected command text reaches the shell function,
+    // which then writes it into BUFFER without executing it.
+    // If TUI were on stdout, escape codes would pollute the captured result and the
+    // shell would attempt to execute garbled text — the fatal bug this fixes.
     enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen)?;
-    let backend = CrosstermBackend::new(stdout);
+    let mut stderr = io::stderr();
+    execute!(stderr, EnterAlternateScreen)?;
+    let backend = CrosstermBackend::new(stderr);
     let mut terminal = Terminal::new(backend)?;
 
     let mut app = App::new(store);

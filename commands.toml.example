@@ -1,0 +1,116 @@
+# ~/.sac/commands.toml — 示例数据
+
+# ── Folders ──────────────────────────────────────────────────────────────────
+
+[[folders]]
+id = "devops"
+parent = ""
+name = "DevOps"
+
+[[folders]]
+id = "devops.k8s"
+parent = "devops"
+name = "Kubernetes"
+
+[[folders]]
+id = "devops.k8s.debug"
+parent = "devops.k8s"
+name = "Debug"
+
+[[folders]]
+id = "devops.docker"
+parent = "devops"
+name = "Docker"
+
+[[folders]]
+id = "git"
+parent = ""
+name = "Git"
+
+[[folders]]
+id = "git.branch"
+parent = "git"
+name = "Branch 操作"
+
+# ── Commands ─────────────────────────────────────────────────────────────────
+
+[[commands]]
+id = 1
+folder = "devops.k8s"
+cmd = "kubectl get pods -n {namespace}"
+desc = "列出指定 namespace 下的所有 pods"
+comment = "需要提前配置好 kubectl context"
+tags = ["k8s", "pods", "list"]
+last_used = ""
+
+[[commands]]
+id = 2
+folder = "devops.k8s"
+cmd = "kubectl logs -f {pod} -n {namespace}"
+desc = "实时跟踪 pod 日志"
+comment = ""
+tags = ["k8s", "logs"]
+last_used = ""
+
+[[commands]]
+id = 3
+folder = "devops.k8s.debug"
+cmd = "kubectl exec -it {pod} -n {namespace} -- /bin/bash"
+desc = "进入 pod 容器的 bash shell"
+comment = "某些镜像只有 sh，把 bash 改成 sh"
+tags = ["k8s", "debug", "exec"]
+last_used = ""
+
+[[commands]]
+id = 4
+folder = "devops.k8s.debug"
+cmd = "kubectl describe pod {pod} -n {namespace}"
+desc = "查看 pod 详情，排查 CrashLoopBackOff"
+comment = ""
+tags = ["k8s", "debug", "describe"]
+last_used = ""
+
+[[commands]]
+id = 5
+folder = "devops.docker"
+cmd = "docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
+desc = "格式化展示所有容器状态"
+comment = ""
+tags = ["docker", "list"]
+last_used = ""
+
+[[commands]]
+id = 6
+folder = "devops.docker"
+cmd = "docker logs -f --tail 100 {container}"
+desc = "实时查看容器最后 100 行日志"
+comment = ""
+tags = ["docker", "logs"]
+last_used = ""
+
+[[commands]]
+id = 7
+folder = "git"
+cmd = "git log --oneline --graph --decorate --all"
+desc = "以图形方式展示所有分支历史"
+comment = "适合用来理解分支结构"
+tags = ["git", "log", "graph"]
+last_used = ""
+
+[[commands]]
+id = 8
+folder = "git.branch"
+cmd = "git branch -vv"
+desc = "查看所有本地分支及其 upstream 关联"
+comment = ""
+tags = ["git", "branch"]
+last_used = ""
+
+[[commands]]
+id = 9
+folder = "git.branch"
+cmd = "git fetch --prune && git branch -r | grep -v '->' | while read remote; do git branch --track \"${remote#origin/}\" \"$remote\" 2>/dev/null; done"
+desc = "同步所有远端分支到本地"
+comment = "慎用，会拉取所有远端分支"
+tags = ["git", "branch", "sync"]
+last_used = ""

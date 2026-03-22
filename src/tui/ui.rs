@@ -31,7 +31,7 @@ pub fn render(frame: &mut Frame, app: &App) {
 }
 
 fn render_header(frame: &mut Frame, area: Rect, _app: &App) {
-    let text = "[数字] 直接选择  [↑↓] 移动  [Enter] 确认  [q/ESC] 返回/退出";
+    let text = "[num] select  [↑↓] move  [Enter] confirm  [q/ESC] back/quit";
     let paragraph = Paragraph::new(text)
         .style(Style::default().fg(Color::DarkGray))
         .alignment(Alignment::Center);
@@ -41,8 +41,8 @@ fn render_header(frame: &mut Frame, area: Rect, _app: &App) {
 fn render_search_box(frame: &mut Frame, area: Rect, app: &App) {
     let mode_label = match app.mode {
         Mode::Search => match app.search_mode {
-            SearchMode::Fuzzy => " 模糊搜索 ",
-            SearchMode::Exact => " 精确搜索 ",
+            SearchMode::Fuzzy => " fuzzy ",
+            SearchMode::Exact => " exact ",
         },
         Mode::Browse => "",
     };
@@ -55,7 +55,7 @@ fn render_search_box(frame: &mut Frame, area: Rect, app: &App) {
     let block = Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Blue))
-        .title("搜索");
+        .title(" search ");
 
     let inner = block.inner(area);
     frame.render_widget(block, area);
@@ -105,7 +105,7 @@ fn render_browse(frame: &mut Frame, area: Rect, app: &App) {
 
     if !folders.is_empty() {
         list_items.push(ListItem::new(Line::from(vec![
-            Span::styled(" 📁 文件夹 ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+            Span::styled(" 📁 folders ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
         ])));
 
         for (i, item) in folders.iter().enumerate() {
@@ -135,7 +135,7 @@ fn render_browse(frame: &mut Frame, area: Rect, app: &App) {
 
     if !commands.is_empty() {
         list_items.push(ListItem::new(Line::from(vec![
-            Span::styled(" ⚡ 命令 ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+            Span::styled(" ⚡ commands ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
         ])));
 
         let folder_count = folders.len();
@@ -173,13 +173,13 @@ fn render_browse(frame: &mut Frame, area: Rect, app: &App) {
 
     if app.items.is_empty() {
         list_items.push(ListItem::new(Line::from(vec![
-            Span::styled("  (空)", Style::default().fg(Color::DarkGray)),
+            Span::styled("  (empty)", Style::default().fg(Color::DarkGray)),
         ])));
     }
 
     // Build breadcrumb title
     let breadcrumb_title = if app.breadcrumb.is_empty() {
-        " 根目录 ".to_string()
+        " / ".to_string()
     } else {
         format!(" {} ", app.breadcrumb.join(" > "))
     };
@@ -240,11 +240,11 @@ fn render_search_results(frame: &mut Frame, area: Rect, app: &App) {
 
     if app.search_results.is_empty() {
         list_items.push(ListItem::new(Line::from(vec![
-            Span::styled("  无结果", Style::default().fg(Color::DarkGray)),
+            Span::styled("  no results", Style::default().fg(Color::DarkGray)),
         ])));
     }
 
-    let title = format!(" 搜索结果: {} 条 ", app.search_results.len());
+    let title = format!(" results: {} ", app.search_results.len());
     let block = Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Blue))
@@ -260,7 +260,7 @@ fn render_status_bar(frame: &mut Frame, area: Rect, app: &App) {
             let folder_count = app.items.iter().filter(|i| matches!(i, BrowseItem::Folder(_))).count();
             let cmd_count = app.items.iter().filter(|i| matches!(i, BrowseItem::Command(_))).count();
             format!(
-                " 📁 {} 个文件夹  ⚡ {} 个命令  |  共 {} 个命令",
+                " 📁 {}  ⚡ {}  |  {} total",
                 folder_count,
                 cmd_count,
                 app.store.commands.len()
@@ -268,7 +268,7 @@ fn render_status_bar(frame: &mut Frame, area: Rect, app: &App) {
         }
         Mode::Search => {
             format!(
-                " 搜索: \"{}\"  |  {} 条结果  |  共 {} 个命令",
+                " query: \"{}\"  |  {} results  |  {} total",
                 app.search_query,
                 app.search_results.len(),
                 app.store.commands.len()
