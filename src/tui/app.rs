@@ -173,33 +173,14 @@ impl App {
     }
 
     fn select_digit(&mut self, idx: usize) -> Result<()> {
-        let num_folders = self.items.iter().filter(|i| matches!(i, BrowseItem::Folder(_))).count();
-        if idx < num_folders {
-            // Enter folder at index idx
-            let folder = self
-                .items
-                .iter()
-                .filter_map(|i| match i {
-                    BrowseItem::Folder(f) => Some(f.clone()),
-                    _ => None,
-                })
-                .nth(idx)
-                .ok_or_else(|| anyhow::anyhow!("Folder index out of bounds"))?;
-            self.enter_folder(folder.id.clone())?;
-        } else {
-            let cmd_idx = idx - num_folders;
-            let cmd = self
-                .items
-                .iter()
-                .filter_map(|i| match i {
-                    BrowseItem::Command(c) => Some(c.clone()),
-                    _ => None,
-                })
-                .nth(cmd_idx)
-                .ok_or_else(|| anyhow::anyhow!("Command index out of bounds"));
-            if let Ok(cmd) = cmd {
-                self.confirm_command(cmd)?;
-            }
+        // Unified numbering: idx is a direct position in the items list.
+        // Folders and commands share the same sequence (1-9, 0 = index 0-9).
+        if idx >= self.items.len() {
+            return Ok(());
+        }
+        match self.items[idx].clone() {
+            BrowseItem::Folder(f) => self.enter_folder(f.id.clone())?,
+            BrowseItem::Command(c) => self.confirm_command(c)?,
         }
         Ok(())
     }

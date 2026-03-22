@@ -89,61 +89,33 @@ fn render_search_box(frame: &mut Frame, area: Rect, app: &App) {
 }
 
 fn render_browse(frame: &mut Frame, area: Rect, app: &App) {
-    let folders: Vec<&BrowseItem> = app
-        .items
-        .iter()
-        .filter(|i| matches!(i, BrowseItem::Folder(_)))
-        .collect();
-    let commands: Vec<&BrowseItem> = app
-        .items
-        .iter()
-        .filter(|i| matches!(i, BrowseItem::Command(_)))
-        .collect();
-
-    // Build list items
+    // Unified list: folders and commands share sequential numbering 1-9, 0.
+    // Folders appear before commands (load_items ordering), but all in one list.
     let mut list_items: Vec<ListItem> = Vec::new();
 
-    if !folders.is_empty() {
-        list_items.push(ListItem::new(Line::from(vec![
-            Span::styled(" 📁 folders ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-        ])));
+    for (i, item) in app.items.iter().enumerate() {
+        let num = if i < 9 {
+            (i + 1).to_string()
+        } else if i == 9 {
+            "0".to_string()
+        } else {
+            " ".to_string() // beyond 10: no key shortcut, only ↑↓ + Enter
+        };
+        let is_selected = app.selected_index == i;
 
-        for (i, item) in folders.iter().enumerate() {
-            if let BrowseItem::Folder(f) = item {
-                let num = if i < 9 { (i + 1).to_string() } else { "0".to_string() };
-                let global_idx = i; // folders are first in items
-                let is_selected = app.selected_index == global_idx;
+        let line = match item {
+            BrowseItem::Folder(f) => {
                 let style = if is_selected {
                     Style::default().fg(Color::Black).bg(Color::Blue)
                 } else {
                     Style::default().fg(Color::Cyan)
                 };
-                let line = Line::from(vec![
+                Line::from(vec![
                     Span::styled(format!(" [{}] ", num), Style::default().fg(Color::DarkGray)),
-                    Span::styled(format!("📁 {}", f.name), style),
-                ]);
-                list_items.push(ListItem::new(line));
+                    Span::styled(format!("📁  {}", f.name), style),
+                ])
             }
-        }
-    }
-
-    if !folders.is_empty() && !commands.is_empty() {
-        list_items.push(ListItem::new(Line::from(vec![
-            Span::styled("─────────────────────────────────────", Style::default().fg(Color::DarkGray)),
-        ])));
-    }
-
-    if !commands.is_empty() {
-        list_items.push(ListItem::new(Line::from(vec![
-            Span::styled(" ⚡ commands ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
-        ])));
-
-        let folder_count = folders.len();
-        for (i, item) in commands.iter().enumerate() {
-            if let BrowseItem::Command(c) = item {
-                let num = if i < 9 { (i + 1).to_string() } else { "0".to_string() };
-                let global_idx = folder_count + i;
-                let is_selected = app.selected_index == global_idx;
+            BrowseItem::Command(c) => {
                 let cmd_style = if is_selected {
                     Style::default().fg(Color::Black).bg(Color::Green)
                 } else {
@@ -154,21 +126,19 @@ fn render_browse(frame: &mut Frame, area: Rect, app: &App) {
                 } else {
                     Style::default().fg(Color::DarkGray)
                 };
-
                 let desc_part = if c.desc.is_empty() {
                     String::new()
                 } else {
                     format!("  # {}", c.desc)
                 };
-
-                let line = Line::from(vec![
+                Line::from(vec![
                     Span::styled(format!(" [{}] ", num), Style::default().fg(Color::DarkGray)),
-                    Span::styled(c.cmd.clone(), cmd_style),
+                    Span::styled(format!("$  {}", c.cmd), cmd_style),
                     Span::styled(desc_part, desc_style),
-                ]);
-                list_items.push(ListItem::new(line));
+                ])
             }
-        }
+        };
+        list_items.push(ListItem::new(line));
     }
 
     if app.items.is_empty() {

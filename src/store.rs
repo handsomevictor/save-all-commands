@@ -109,48 +109,60 @@ impl Store {
         self.commands.iter().map(|c| c.id).max().unwrap_or(0) + 1
     }
 
+    /// Check structural constraints.
+    /// Each folder (and the root level) may contain at most 10 items total —
+    /// sub-folders and commands combined — because the TUI only has keys 1-9 and 0.
     pub fn validate(&self) -> Result<()> {
-        // Check max 10 subfolders per folder
-        let all_parent_ids: Vec<&str> = self.folders.iter().map(|f| f.parent.as_str()).collect();
-        for folder in &self.folders {
-            let child_count = all_parent_ids
-                .iter()
-                .filter(|&&pid| pid == folder.id.as_str())
-                .count();
-            if child_count > 10 {
-                bail!(
-                    "Folder '{}' has {} subfolders, which exceeds the limit of 10",
-                    folder.name,
-                    child_count
-                );
-            }
-        }
-
-        // Also check root-level folders (parent = "")
-        let root_child_count = all_parent_ids.iter().filter(|&&pid| pid.is_empty()).count();
-        if root_child_count > 10 {
+        // Check root level
+        let root_folders = self.folders.iter().filter(|f| f.parent.is_empty()).count();
+        let root_commands = self.commands.iter().filter(|c| c.folder.is_empty()).count();
+        let root_total = root_folders + root_commands;
+        if root_total > 10 {
             bail!(
-                "Root has {} subfolders, which exceeds the limit of 10",
-                root_child_count
+                "Root has {} items (sub-folders + commands combined), limit is 10",
+                root_total
             );
         }
 
-        // Check max 10 commands per folder
+        // Check each named folder
         for folder in &self.folders {
-            let cmd_count = self
+            let child_folders = self
+                .folders
+                .iter()
+                .filter(|f| f.parent == folder.id)
+                .count();
+            let child_commands = self
                 .commands
                 .iter()
                 .filter(|c| c.folder == folder.id)
                 .count();
-            if cmd_count > 10 {
+            let total = child_folders + child_commands;
+            if total > 10 {
                 bail!(
-                    "Folder '{}' has {} commands, which exceeds the limit of 10",
+                    "Folder '{}' has {} items (sub-folders + commands combined), limit is 10",
                     folder.name,
-                    cmd_count
+                    total
                 );
             }
         }
 
         Ok(())
+    }
+
+    /// Detect duplicate command IDs and reassign them sequentially.
+    /// Returns true if any IDs were changed.
+    pub fn auto_fix_ids(&mut self) -> bool {
+        use std::collections::HashSet;
+        let mut seen: HashSet<u32> = HashSet::new();
+        let has_duplicates = self.commands.iter().any(|c| !seen.insert(c.id));
+        if !has_duplicates {
+            return false;
+        }
+        // Sort by current ID to preserve relative order, then reassign 1, 2, 3, ...
+        self.commands.sort_by_key(|c| c.id);
+        for (i, cmd) in self.commands.iter_mut().enumerate() {
+            cmd.id = (i + 1) as u32;
+        }
+        true
     }
 }

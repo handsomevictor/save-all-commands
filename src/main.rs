@@ -226,7 +226,22 @@ fn main() -> anyhow::Result<()> {
 
     match cli.command {
         None => {
-            let store = Store::load()?;
+            let mut store = Store::load()?;
+            // Auto-fix duplicate command IDs before entering TUI.
+            if store.auto_fix_ids() {
+                eprintln!(
+                    "Warning: duplicate command IDs were detected and auto-reassigned. \
+                     Run `sac where commands` to see the updated file."
+                );
+                store.save()?;
+            }
+            // Validate structural constraints (item count per folder).
+            if let Err(e) = store.validate() {
+                eprintln!("Error: commands file is invalid: {}", e);
+                eprintln!("Fix the issue in your commands.toml, then run sac again.");
+                eprintln!("Run `sac where commands` to locate the file.");
+                std::process::exit(1);
+            }
             let output = tui::run_tui(store)?;
             if let Some(cmd) = output {
                 print!("{}", cmd);
