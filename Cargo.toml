@@ -1,0 +1,28 @@
+[package]
+name = "sac"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "sac"
+path = "src/main.rs"
+
+[lib]
+name = "sac"
+path = "src/lib.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+ratatui = "0.28"
+crossterm = "0.28"
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+nucleo-matcher = "0.3"
+arboard = "3"
+dirs = "5"
+chrono = { version = "0.4", features = ["serde"] }
+anyhow = "1"
+reqwest = { version = "0.12", features = ["blocking"] }
+
+[dev-dependencies]
+tempfile = "3"
