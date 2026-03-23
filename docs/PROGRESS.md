@@ -1,5 +1,19 @@
 # 更新记录
 
+## v0.1.5 — 2026-03-23
+
+### 修复
+
+- **[致命] `sac:zle: widgets can only be called when ZLE is active`**：完全重写 zsh/bash/fish shell integration
+  - 用 `[[ $# -eq 0 ]]` 门控 TUI 入口，其他参数直接 `command sac "$@"` passthrough（修复 `--version`、`add` 等子命令被错误捕获的问题）
+  - 用 tmpfile 方案（`command sac >"$tmp" 2>/dev/tty`）替代 `$()`，sac 进程运行在前台，ZLE 不再拦截 stdin
+  - 用 `if zle; then ... else print -z -- "$result"; fi` 检测 ZLE 上下文，安全设置 BUFFER / 调用 `zle redisplay`
+  - 新增 `# end sac shell integration` 结束标记；`sac install` 可检测旧格式并提示升级
+- **[致命] `Error: Failed to initialize input reader`**：移除 `dup2(tty_fd, STDIN_FILENO)` — kqueue 无法监听通过 dup2 替换的 `/dev/tty` fd；新 shell integration 使 stdin 在运行时已是真实 TTY，不再需要 dup2
+- **移除 `libc` 依赖**：dup2 方案废弃，`libc` crate 不再需要
+
+---
+
 ## v0.1.4 — 2026-03-23
 
 ### 修复

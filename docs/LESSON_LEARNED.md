@@ -81,6 +81,33 @@ Shell integration 已通过 `2>/dev/tty` 将 stderr 重定向到真实终端，T
 
 ---
 
+## [2026-03-23] 致命：dup2 重定向 stdin 后 crossterm "Failed to initialize input reader"
+
+**现象**：通过 `dup2(tty_fd, STDIN_FILENO)` 将 stdin 重映射到 `/dev/tty` 后，crossterm 报错 `Failed to initialize input reader`，TUI 无法启动。
+
+**原因**：crossterm 在 Unix 上使用 mio + kqueue/epoll 注册 stdin（fd 0）进行事件监听。dup2 执行后，fd 0 指向 `/dev/tty` 设备文件；但 kqueue 对终端设备文件的 EVFILT_READ 注册会失败（某些 macOS/BSD 版本不支持对 `/dev/tty` fd 的 kqueue 监听），导致 crossterm 内部 mio 初始化报错。
+
+**解决**：放弃 dup2 方案。根本修复在于改变 shell integration 架构：从 `result=$(command sac ...)` 改为 `command sac >"$tmp" 2>/dev/tty`（tmpfile 方案）。新方案中 sac 进程运行在前台，不在 `$()` 子 shell 内，ZLE 不再拦截 stdin，stdin 直接继承自交互式 shell（已是真实 TTY），crossterm 正常注册 kqueue 事件，无需 dup2。TUI 渲染后端只需 write-only 打开 `/dev/tty` 即可。
+
+**教训**：kqueue/epoll 对 `/dev/tty` fd 的可注册性在 macOS 上不稳定。不要用 dup2 强制替换 stdin；正确解法是确保进程从一开始就在正确的上下文（前台、真实 TTY stdin）中运行，这需要在 shell integration 层面解决而非在 Rust 层面打补丁。
+
+---
+
+## [2026-03-23] 致命：$() 捕获方案根本缺陷 + ZLE widget 上下文错误
+
+**现象**：`sac install` 后，每次 `source ~/.zshrc` 或直接运行 `sac --version` 都报 `sac:zle: widgets can only be called when ZLE is active`。
+
+**原因**：旧的 shell integration 无条件调用 `zle redisplay` 和设置 `BUFFER`，但这些操作只能在 ZLE widget 上下文内（即用户正在编辑命令行时）调用。`source ~/.zshrc` 和直接命令调用均不在 ZLE 上下文中，导致报错。此外，`result=$(command sac ...)` 将 sac 放入 `$()` 子 shell，ZLE 通过进程组拦截 stdin，`event::read()` 永久阻塞。
+
+**解决**：完全重写 shell integration，采用 tmpfile 方案：
+- `[[ $# -eq 0 ]]` 门控：只有无参调用才启动 TUI，否则直接 `command sac "$@"` passthrough（修复 `--version` 等子命令被捕获的问题）
+- `command sac >"$tmp" 2>/dev/tty`：sac 在前台运行，stdout 重定向到 tmpfile，无 `$()` 包裹，ZLE 不拦截
+- `if zle; then ... else print -z -- "$result"; fi`：检测是否在 ZLE 上下文，否则用 `print -z` 将命令放入 next-prompt buffer
+
+**教训**：`$()` + ZLE 是两个独立的致命问题。shell integration 的正确架构：(1) 用参数数量门控 TUI 入口；(2) 用 tmpfile 替代 `$()`；(3) 用 `if zle` 检测上下文后再调用 ZLE builtins。
+
+---
+
 ## [2026-03-23] Style 类型实现了 Copy，不应调用 clone()
 
 **现象**：`meta_style.clone()` 触发 clippy `clone_on_copy` warning。

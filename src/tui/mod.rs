@@ -17,47 +17,23 @@ use crate::store::Store;
 pub fn run_tui(store: Store) -> Result<Option<String>> {
     // ── Terminal I/O setup ────────────────────────────────────────────────────
     //
-    // Problem: the shell integration runs sac inside a command substitution:
-    //   result=$(command sac "$@" 2>/dev/tty)
+    // The new shell integration runs sac in the foreground via a tmpfile:
+    //   command sac >"$tmp" 2>/dev/tty
     //
-    // Inside $(), zsh's ZLE (line editor) still owns the terminal.  When a
-    // child process inherits stdin in that context, ZLE intercepts key events
-    // before they reach the child, so crossterm's event::read() blocks forever
-    // — the "frozen terminal" symptom.
-    //
-    // Solution (same as fzf): open /dev/tty with O_RDWR and dup2 it onto
-    // stdin (fd 0).  After the dup2, stdin IS the controlling terminal and
-    // is no longer subject to ZLE interception.  The same fd is used for the
-    // rendering backend so both reads and writes go through the same tty fd.
-    //
-    // On stdout: stays as-is (a pipe captured by $()).  After the TUI exits,
-    // main() writes the selected command to stdout — the only thing the shell
-    // function captures.
+    // The process is NOT inside $(), so ZLE does not intercept stdin.
+    // stdin is inherited from the interactive shell and is a real TTY.
+    // We only need to open /dev/tty for the rendering backend (writes) so
+    // that the TUI draws directly to the terminal regardless of stdout/stderr
+    // redirections (the tmpfile redirect makes stdout a pipe).
     let tty_file = std::fs::OpenOptions::new()
-        .read(true)
         .write(true)
         .open("/dev/tty")
         .context("Cannot open /dev/tty — sac requires an interactive terminal")?;
 
-    // Redirect stdin → /dev/tty so crossterm event::read() receives key events
-    // directly from the terminal, bypassing any ZLE / job-control interception.
-    #[cfg(unix)]
-    {
-        use std::os::unix::io::AsRawFd;
-        let tty_fd = tty_file.as_raw_fd();
-        let ret = unsafe { libc::dup2(tty_fd, libc::STDIN_FILENO) };
-        if ret == -1 {
-            return Err(anyhow::anyhow!(
-                "dup2(/dev/tty, stdin) failed: {}",
-                std::io::Error::last_os_error()
-            ));
-        }
-    }
-
     enable_raw_mode()?;
 
-    // Use the same /dev/tty fd for the rendering backend.
-    // BufWriter batches writes so ratatui's full-frame redraws are efficient.
+    // Write TUI output to /dev/tty; reads (key events) come from stdin which
+    // is already the real TTY when running in the foreground.
     let backend = CrosstermBackend::new(BufWriter::new(tty_file));
     let mut terminal = Terminal::new(backend)?;
     execute!(terminal.backend_mut(), EnterAlternateScreen)?;
