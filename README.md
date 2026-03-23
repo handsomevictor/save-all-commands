@@ -63,12 +63,19 @@ cd save-all-commands
 cargo install --path .
 ```
 
-安装完成后，配置 shell 集成（**强烈建议**，不配置则选中命令只会打印到 stdout）：
+安装完成后，加载示例数据并配置 shell 集成：
 
 ```bash
+# 可选：使用仓库自带的示例命令文件快速体验
+mkdir -p ~/.sac
+cp commands.toml.example ~/.sac/commands.toml
+
+# 配置 shell 集成（强烈建议，否则选中命令只会打印到 stdout 而非填入输入栏）
 sac install
 source ~/.zshrc   # 或 source ~/.bashrc / source ~/.config/fish/config.fish
 ```
+
+> **注意**：`cargo install` 只安装二进制文件，不复制项目文件。`commands.toml.example` 需从克隆目录手动复制，或在任意位置创建 `~/.sac/commands.toml`，也可直接运行 `sac add` 从零开始添加命令。
 
 验证安装：
 
