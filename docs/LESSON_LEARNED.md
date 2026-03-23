@@ -1,5 +1,19 @@
 # 开发过程 Bug 记录
 
+## [2026-03-23] 致命：TUI 使用 stderr 后终端卡死
+
+**现象**：将渲染后端从 stdout 改为 stderr 后，运行 `sac` 终端直接卡死，无任何输出，只能强制 Ctrl+C。
+
+**原因**：`crossterm::terminal::size()` 在 Unix 上通过 `ioctl(STDOUT_FILENO, TIOCGWINSZ, ...)` 获取终端尺寸，stdout 优先。Shell integration 执行 `result=$(command sac "$@" 2>/dev/tty)` 时，stdout 是 pipe 而非 TTY，`TIOCGWINSZ` 返回 ENOTTY。`Terminal::new(backend)?` 在尺寸查询失败时出错返回，但此时 `enable_raw_mode()` 已经调用，cleanup 代码（`disable_raw_mode` / `LeaveAlternateScreen`）在错误传播路径上可能未执行，终端被锁在 raw mode + alternate screen，表现为完全卡死。
+
+即便 crossterm 内部有 fallback（尝试 stdin、/dev/tty），当 stderr 作为后端时，部分版本的 crossterm 在尺寸或事件处理上仍与 stderr 产生不兼容，导致不稳定。
+
+**解决**：直接打开 `/dev/tty` 作为渲染后端（`OpenOptions::new().write(true).open("/dev/tty")`）。`/dev/tty` 始终指向进程的控制终端，不受任何 stdout/stderr 重定向影响，是 fzf、vim、tmux 等工具的行业标准做法。同时将 cleanup 全部改为 `let _ =`，确保即使中间步骤失败，终端状态也一定被恢复。
+
+**教训**：stdout/stderr 在 shell 调用链中随时可能被重定向。TUI 工具必须打开 `/dev/tty` 作为渲染目标，不能依赖 stdout/stderr 的当前状态。cleanup 代码必须全部用 `let _ =` 包裹，任何 `?` 都可能跳过后续的终端恢复操作。
+
+---
+
 ## [2026-03-23] 设计缺陷：TUI folder/command 分区编号导致 [1] 含义歧义
 
 **现象**：TUI 中 folder 和 command 各自独立编号（folder [1]、command [1] 同时存在），按数字键时行为取决于当前 items 排列，违反"编号不可重复"的直觉认知，用户需要记住"先按哪个 1"。
