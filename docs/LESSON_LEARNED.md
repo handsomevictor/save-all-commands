@@ -1,5 +1,24 @@
 # 开发过程 Bug 记录
 
+## [2026-03-23] 致命：/dev/tty 写入后 stdin 仍被 ZLE 持有导致 event::read() 永久阻塞
+
+**现象**：改用 `/dev/tty` 作为渲染后端后，TUI 画面能正常显示，但按任意键均无响应，终端完全卡死。
+
+**原因**：zsh 的 ZLE（Zsh Line Editor）在交互式 shell 中始终持有 stdin（fd 0）的控制权。在 `$()` 子 shell 里，子进程虽然继承了 stdin，但 ZLE 仍通过进程组和终端所有权拦截键盘输入。`crossterm::event::read()` 从 stdin 读取事件，由于 ZLE 的拦截，这个读取永远不会返回，表现为完全卡死。改用 `/dev/tty` 作为写入后端只解决了渲染问题，没有解决读取问题。
+
+**解决**：参照 fzf 的实现方式：以 `O_RDWR` 打开 `/dev/tty`，然后通过 `libc::dup2(tty_fd, STDIN_FILENO)` 将 stdin 重定向到 `/dev/tty`。dup2 之后，fd 0 直接指向终端设备文件，不再通过 ZLE 管理的文件描述符路径，`event::read()` 从新的 stdin（即 `/dev/tty`）读取键盘事件，正常响应。
+
+```rust
+let tty_file = OpenOptions::new().read(true).write(true).open("/dev/tty")?;
+unsafe { libc::dup2(tty_file.as_raw_fd(), libc::STDIN_FILENO) };
+enable_raw_mode()?;
+let backend = CrosstermBackend::new(BufWriter::new(tty_file));
+```
+
+**教训**：在 zsh 交互式 shell 中，`$()` 子进程的 stdin 表面上继承自 shell，但 ZLE 会拦截键盘输入。任何需要在此上下文中读取键盘的 TUI 工具，必须通过 `dup2` 将 stdin 重映射到 `/dev/tty`，而不是假设 stdin 可直接使用。这是 fzf、peco 等所有主流 TUI 选择器的标准实践。
+
+---
+
 ## [2026-03-23] 致命：TUI 使用 stderr 后终端卡死
 
 **现象**：将渲染后端从 stdout 改为 stderr 后，运行 `sac` 终端直接卡死，无任何输出，只能强制 Ctrl+C。

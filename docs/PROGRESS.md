@@ -1,5 +1,15 @@
 # 更新记录
 
+## v0.1.4 — 2026-03-23
+
+### 修复
+
+- **`--version` 不可用**：clap `#[command]` 缺少 `version` 属性，现已补全，`sac --version` 正常输出版本号
+- **[致命] TUI 卡死（ZLE 冲突）**：将 `/dev/tty` 改为 `O_RDWR` 打开，并通过 `dup2` 将 stdin（fd 0）重定向到 `/dev/tty`；zsh ZLE 在 `$()` 子 shell 中持有 stdin，导致 `event::read()` 永久阻塞，dup2 后 stdin 直接指向终端设备，绕过 ZLE 拦截
+- **Ctrl+C 无法退出 TUI**：在浏览模式和搜索模式中均添加 `KeyModifiers::CONTROL + 'c'` 处理，按 Ctrl+C 立即退出并不输出任何命令
+
+---
+
 ## v0.1.3 — 2026-03-23
 
 ### 修复

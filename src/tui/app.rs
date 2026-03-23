@@ -1,6 +1,6 @@
 use anyhow::Result;
 use chrono::Local;
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 use crate::search::{SearchResult, Searcher};
 use crate::store::{Command, Folder, Store};
@@ -60,13 +60,20 @@ impl App {
 
     pub fn handle_key(&mut self, key_event: KeyEvent) -> Result<()> {
         match self.mode {
-            Mode::Browse => self.handle_key_browse(key_event.code),
-            Mode::Search => self.handle_key_search(key_event.code),
+            Mode::Browse => self.handle_key_browse(key_event),
+            Mode::Search => self.handle_key_search(key_event),
         }
     }
 
-    fn handle_key_browse(&mut self, key: KeyCode) -> Result<()> {
-        match key {
+    fn handle_key_browse(&mut self, key_event: KeyEvent) -> Result<()> {
+        // Ctrl+C always quits without output
+        if key_event.modifiers.contains(KeyModifiers::CONTROL)
+            && key_event.code == KeyCode::Char('c')
+        {
+            self.should_quit = true;
+            return Ok(());
+        }
+        match key_event.code {
             KeyCode::Char('1') => self.select_digit(0)?,
             KeyCode::Char('2') => self.select_digit(1)?,
             KeyCode::Char('3') => self.select_digit(2)?,
@@ -109,8 +116,15 @@ impl App {
         Ok(())
     }
 
-    fn handle_key_search(&mut self, key: KeyCode) -> Result<()> {
-        match key {
+    fn handle_key_search(&mut self, key_event: KeyEvent) -> Result<()> {
+        // Ctrl+C always quits without output
+        if key_event.modifiers.contains(KeyModifiers::CONTROL)
+            && key_event.code == KeyCode::Char('c')
+        {
+            self.should_quit = true;
+            return Ok(());
+        }
+        match key_event.code {
             KeyCode::Char('1') => self.select_search_digit(0)?,
             KeyCode::Char('2') => self.select_search_digit(1)?,
             KeyCode::Char('3') => self.select_search_digit(2)?,

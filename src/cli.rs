@@ -1,7 +1,7 @@
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 #[derive(Parser)]
-#[command(name = "sac", about = "Save all commands - terminal command manager")]
+#[command(name = "sac", about = "Save all commands - terminal command manager", version)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Commands>,
