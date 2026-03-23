@@ -308,11 +308,26 @@ impl App {
         }
     }
 
-    /// Returns the effective query string for searching (strips "//" prefix for exact mode).
+    /// Returns the effective query string for searching.
+    ///
+    /// - Exact mode: strips the leading "//" prefix.
+    /// - Fuzzy mode: strips a single leading "/" so users can type "/" to
+    ///   activate search (vim-style) without it polluting the query.
+    ///   e.g. raw query "/doc" → effective "doc"; "doc" → "doc".
+    ///   To reach exact mode: type "/" (enters search) then "/query" — the
+    ///   raw query becomes "//query" which triggers Exact mode as usual.
     pub fn effective_query(&self) -> String {
         match self.search_mode {
             SearchMode::Exact => self.search_query.trim_start_matches("//").to_string(),
-            SearchMode::Fuzzy => self.search_query.clone(),
+            SearchMode::Fuzzy => {
+                // Strip exactly one leading "/" (vim-style activation).
+                // "//" is already handled by Exact mode above.
+                if self.search_query.starts_with('/') {
+                    self.search_query[1..].to_string()
+                } else {
+                    self.search_query.clone()
+                }
+            }
         }
     }
 }

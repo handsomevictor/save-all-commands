@@ -92,10 +92,38 @@ fn integration_snippet(shell_type: &ShellType) -> &'static str {
     }
 }
 
-/// Check if "sac shell integration" already exists in rc file.
-/// If the old format is detected (no "end sac shell integration" marker),
-/// print upgrade instructions and skip writing.
-/// If already up to date, skip. Otherwise append the new snippet.
+// The exact text written by the previous (broken) version of sac install.
+// Used for auto-upgrade detection and removal.
+const OLD_ZSH_BASH_SNIPPET: &str = concat!(
+    "\n# sac shell integration\n",
+    "function sac() { local result; result=$(command sac \"$@\" 2>/dev/tty); ",
+    "if [[ -n \"$result\" ]]; then BUFFER=\"$result\"; zle redisplay; fi }\n",
+);
+
+const OLD_FISH_SNIPPET: &str = concat!(
+    "\n# sac shell integration\n",
+    "function sac\n",
+    "    set result (command sac $argv 2>/dev/tty)\n",
+    "    if test -n \"$result\"\n",
+    "        commandline \"$result\"\n",
+    "    end\n",
+    "end\n",
+);
+
+/// Remove the old (v0.1.x) integration snippet via exact string replacement.
+/// Returns the cleaned content. If neither old snippet is found verbatim,
+/// returns the content unchanged (caller will print manual instructions).
+fn strip_old_integration(content: &str) -> String {
+    content
+        .replace(OLD_ZSH_BASH_SNIPPET, "")
+        .replace(OLD_FISH_SNIPPET, "")
+}
+
+/// Write the shell integration to the rc file.
+/// - If the new format is already present (end marker found): skip.
+/// - If the old format is present: auto-upgrade (remove old, append new).
+/// - If old format cannot be removed verbatim: print manual instructions.
+/// - Otherwise: append the new snippet.
 pub fn write_integration(shell_type: &ShellType) -> Result<()> {
     let rc_path = get_rc_path(shell_type)?;
 
@@ -106,29 +134,42 @@ pub fn write_integration(shell_type: &ShellType) -> Result<()> {
         String::new()
     };
 
+    // Already up to date
     if existing.contains("# end sac shell integration") {
         println!("Shell integration already installed in {}", rc_path.display());
         return Ok(());
     }
 
-    if existing.contains("sac shell integration") {
-        // Old format detected — guide the user to upgrade manually
-        println!("Old sac shell integration detected in {}.", rc_path.display());
-        println!("Please remove the old block (between '# sac shell integration' and the");
-        println!("closing 'end' / closing brace), then run `sac install` again.");
-        return Ok(());
-    }
-
-    let snippet = integration_snippet(shell_type);
-    let mut content = existing;
-    content.push_str(snippet);
+    let new_content = if existing.contains("sac shell integration") {
+        // Old format detected — try to auto-upgrade
+        let cleaned = strip_old_integration(&existing);
+        if cleaned.contains("sac shell integration") {
+            // Could not remove verbatim (user edited the block)
+            println!("Old sac shell integration found in {}.", rc_path.display());
+            println!("Please manually remove the block between");
+            println!("  '# sac shell integration'  and  the closing '}}' or 'end',");
+            println!("then run `sac install` again.");
+            return Ok(());
+        }
+        println!(
+            "Upgrading sac shell integration in {} ...",
+            rc_path.display()
+        );
+        let mut s = cleaned;
+        s.push_str(integration_snippet(shell_type));
+        s
+    } else {
+        let mut s = existing;
+        s.push_str(integration_snippet(shell_type));
+        s
+    };
 
     if let Some(parent) = rc_path.parent() {
         std::fs::create_dir_all(parent)
             .with_context(|| format!("Failed to create directory: {}", parent.display()))?;
     }
 
-    std::fs::write(&rc_path, content)
+    std::fs::write(&rc_path, new_content)
         .with_context(|| format!("Failed to write {}", rc_path.display()))?;
 
     println!("Shell integration installed in {}", rc_path.display());
