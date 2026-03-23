@@ -91,11 +91,7 @@ sac --version
 
 ### 第一步：创建示例数据文件
 
-将以下内容写入 `~/.sac/commands.toml`（文件不存在时 `sac` 会自动创建空文件，你也可以直接替换内容）：
-
-```bash
-cp ./commands.toml.example ~/.sac/commands.toml
-````
+安装后自动将以下内容写入 `~/.sac/commands.toml`（文件不存在时 `sac` 会自动创建空文件，你也可以直接替换内容）：
 
 ```toml
 # ~/.sac/commands.toml — 示例数据
