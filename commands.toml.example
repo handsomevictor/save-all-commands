@@ -5,29 +5,9 @@
 #   - Type any chars in the TUI to fuzzy-search across cmd, desc, and tags
 #   - Type "/" first (vim-style) then your query for the same result
 #   - Type "//query" for exact substring search
-#   - Tag matches are ranked first — try typing "k8s", "docker", or "git"
+#   - Tag matches are ranked first — try typing "k8s", "docker", "git", or "linux"
 
 # ── Folders ────────────────────────────────────────────────────────────────────
-
-[[folders]]
-id = "devops"
-parent = ""
-name = "DevOps"
-
-[[folders]]
-id = "devops.k8s"
-parent = "devops"
-name = "Kubernetes"
-
-[[folders]]
-id = "devops.k8s.debug"
-parent = "devops.k8s"
-name = "Debug"
-
-[[folders]]
-id = "devops.docker"
-parent = "devops"
-name = "Docker"
 
 [[folders]]
 id = "git"
@@ -35,82 +15,209 @@ parent = ""
 name = "Git"
 
 [[folders]]
+id = "git.commit"
+parent = "git"
+name = "Commit"
+
+[[folders]]
 id = "git.branch"
 parent = "git"
 name = "Branch"
 
-# ── Commands ───────────────────────────────────────────────────────────────────
+[[folders]]
+id = "git.remote"
+parent = "git"
+name = "Remote"
+
+[[folders]]
+id = "git.log"
+parent = "git"
+name = "Log & Diff"
+
+[[folders]]
+id = "git.stash"
+parent = "git"
+name = "Stash"
+
+[[folders]]
+id = "git.rebase"
+parent = "git"
+name = "Rebase & Reset"
+
+[[folders]]
+id = "docker"
+parent = ""
+name = "Docker"
+
+[[folders]]
+id = "docker.containers"
+parent = "docker"
+name = "Containers"
+
+[[folders]]
+id = "docker.images"
+parent = "docker"
+name = "Images"
+
+[[folders]]
+id = "docker.compose"
+parent = "docker"
+name = "Compose"
+
+[[folders]]
+id = "k8s"
+parent = ""
+name = "Kubernetes"
+
+[[folders]]
+id = "k8s.pods"
+parent = "k8s"
+name = "Pods"
+
+[[folders]]
+id = "k8s.deploy"
+parent = "k8s"
+name = "Deployments"
+
+[[folders]]
+id = "k8s.debug"
+parent = "k8s"
+name = "Debug"
+
+[[folders]]
+id = "linux"
+parent = ""
+name = "Linux"
+
+[[folders]]
+id = "linux.process"
+parent = "linux"
+name = "Process"
+
+[[folders]]
+id = "linux.network"
+parent = "linux"
+name = "Network"
+
+[[folders]]
+id = "linux.files"
+parent = "linux"
+name = "Files"
+
+[[folders]]
+id = "linux.text"
+parent = "linux"
+name = "Text"
+
+[[folders]]
+id = "dev"
+parent = ""
+name = "Dev Tools"
+
+[[folders]]
+id = "dev.cargo"
+parent = "dev"
+name = "Cargo / Rust"
+
+[[folders]]
+id = "dev.npm"
+parent = "dev"
+name = "npm / Node"
+
+[[folders]]
+id = "dev.ssh"
+parent = "dev"
+name = "SSH & Keys"
+
+[[folders]]
+id = "python"
+parent = ""
+name = "Python"
+
+[[folders]]
+id = "python.env"
+parent = "python"
+name = "Virtual Env"
+
+[[folders]]
+id = "python.pip"
+parent = "python"
+name = "pip"
+
+# ── Git · Commit ───────────────────────────────────────────────────────────────
 
 [[commands]]
 id = 1
-folder = "devops.k8s"
-cmd = "kubectl get pods -n {namespace}"
-desc = "List all pods in a namespace"
-comment = "Make sure the correct kubectl context is active first"
-tags = ["k8s", "pods", "list"]
+folder = "git.commit"
+cmd = "git add -A && git commit -m \"{message}\""
+desc = "Stage all changes and commit"
+comment = "Stages tracked and untracked files; skip untracked with 'git add -u'"
+tags = ["git", "commit", "stage"]
 last_used = ""
 
 [[commands]]
 id = 2
-folder = "devops.k8s"
-cmd = "kubectl logs -f {pod} -n {namespace}"
-desc = "Stream pod logs in real time"
-comment = "Add --tail 100 to limit the initial output"
-tags = ["k8s", "logs", "stream"]
+folder = "git.commit"
+cmd = "git commit --amend --no-edit"
+desc = "Amend last commit without changing the message"
+comment = "Useful for adding a forgotten file; avoid on pushed commits"
+tags = ["git", "commit", "amend"]
 last_used = ""
 
 [[commands]]
 id = 3
-folder = "devops.k8s.debug"
-cmd = "kubectl exec -it {pod} -n {namespace} -- /bin/bash"
-desc = "Open an interactive shell inside a running pod"
-comment = "Use /bin/sh if bash is not available in the image"
-tags = ["k8s", "debug", "exec", "shell"]
+folder = "git.commit"
+cmd = "git commit --amend -m \"{new_message}\""
+desc = "Amend last commit with a new message"
+comment = "Rewrites the commit hash; force-push required if already pushed"
+tags = ["git", "commit", "amend"]
 last_used = ""
 
 [[commands]]
 id = 4
-folder = "devops.k8s.debug"
-cmd = "kubectl describe pod {pod} -n {namespace}"
-desc = "Show full pod details including events and resource limits"
-comment = "Useful for diagnosing CrashLoopBackOff or ImagePullBackOff"
-tags = ["k8s", "debug", "describe", "troubleshoot"]
+folder = "git.commit"
+cmd = "git add -p"
+desc = "Interactively stage hunks"
+comment = "Use 's' to split a hunk, 'e' to edit manually"
+tags = ["git", "commit", "interactive", "stage"]
 last_used = ""
 
 [[commands]]
 id = 5
-folder = "devops.docker"
-cmd = "docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
-desc = "Show all containers with status and port mappings"
-comment = "Remove -a to show only running containers"
-tags = ["docker", "containers", "list"]
+folder = "git.commit"
+cmd = "git commit --fixup {commit_hash}"
+desc = "Create a fixup commit targeting an earlier commit"
+comment = "Use with 'git rebase -i --autosquash' to squash automatically"
+tags = ["git", "commit", "fixup", "rebase"]
 last_used = ""
 
 [[commands]]
 id = 6
-folder = "devops.docker"
-cmd = "docker logs -f --tail 100 {container}"
-desc = "Stream the last 100 lines of a container log"
-comment = "Combine with grep: docker logs {container} 2>&1 | grep ERROR"
-tags = ["docker", "logs", "stream"]
+folder = "git.commit"
+cmd = "git cherry-pick {commit_hash}"
+desc = "Apply a commit from another branch"
+comment = "Use -n to apply changes without committing"
+tags = ["git", "commit", "cherry-pick"]
 last_used = ""
 
 [[commands]]
 id = 7
-folder = "devops.docker"
-cmd = "docker exec -it {container} /bin/sh"
-desc = "Open a shell inside a running container"
-comment = "Try /bin/bash if /bin/sh is missing"
-tags = ["docker", "exec", "shell", "debug"]
+folder = "git.commit"
+cmd = "git revert {commit_hash} --no-edit"
+desc = "Create a revert commit for a given commit"
+comment = "Safe way to undo a pushed commit without rewriting history"
+tags = ["git", "commit", "revert"]
 last_used = ""
+
+# ── Git · Branch ───────────────────────────────────────────────────────────────
 
 [[commands]]
 id = 8
-folder = "git"
-cmd = "git log --oneline --graph --decorate --all"
-desc = "Visualise full branch history as an ASCII graph"
-comment = "Alias as 'glog' for quick access"
-tags = ["git", "log", "graph", "history"]
+folder = "git.branch"
+cmd = "git checkout -b {branch_name}"
+desc = "Create and switch to a new branch"
+comment = "Equivalent to 'git switch -c {branch_name}' in newer git"
+tags = ["git", "branch", "checkout"]
 last_used = ""
 
 [[commands]]
@@ -118,6 +225,989 @@ id = 9
 folder = "git.branch"
 cmd = "git branch -vv"
 desc = "List local branches with upstream tracking status"
-comment = "Shows ahead/behind counts vs the remote branch"
+comment = "Shows ahead/behind counts relative to the remote branch"
 tags = ["git", "branch", "upstream"]
+last_used = ""
+
+[[commands]]
+id = 10
+folder = "git.branch"
+cmd = "git branch -d {branch_name}"
+desc = "Delete a merged branch locally"
+comment = "Use -D to force-delete an unmerged branch"
+tags = ["git", "branch", "delete"]
+last_used = ""
+
+[[commands]]
+id = 11
+folder = "git.branch"
+cmd = "git push origin --delete {branch_name}"
+desc = "Delete a remote branch"
+comment = "Also removes the remote-tracking reference locally after fetch --prune"
+tags = ["git", "branch", "delete", "remote"]
+last_used = ""
+
+[[commands]]
+id = 12
+folder = "git.branch"
+cmd = "git branch --merged | grep -v '\\*\\|main\\|master' | xargs git branch -d"
+desc = "Delete all local branches already merged into current"
+comment = "Adjust the grep pattern if your default branch has a different name"
+tags = ["git", "branch", "cleanup"]
+last_used = ""
+
+[[commands]]
+id = 13
+folder = "git.branch"
+cmd = "git fetch --prune"
+desc = "Fetch and prune stale remote-tracking branches"
+comment = "Removes refs for remote branches that no longer exist"
+tags = ["git", "branch", "fetch", "prune"]
+last_used = ""
+
+# ── Git · Remote ───────────────────────────────────────────────────────────────
+
+[[commands]]
+id = 14
+folder = "git.remote"
+cmd = "git remote -v"
+desc = "List all remotes with their fetch/push URLs"
+comment = ""
+tags = ["git", "remote"]
+last_used = ""
+
+[[commands]]
+id = 15
+folder = "git.remote"
+cmd = "git remote add origin {url}"
+desc = "Add a new remote named origin"
+comment = "Replace 'origin' with any alias you prefer"
+tags = ["git", "remote", "add"]
+last_used = ""
+
+[[commands]]
+id = 16
+folder = "git.remote"
+cmd = "git push -u origin {branch_name}"
+desc = "Push branch and set upstream tracking"
+comment = "Only needs -u once; subsequent pushes can omit -u"
+tags = ["git", "remote", "push"]
+last_used = ""
+
+[[commands]]
+id = 17
+folder = "git.remote"
+cmd = "git pull --rebase origin {branch_name}"
+desc = "Pull with rebase to avoid merge commits"
+comment = "Keeps a linear history; use --no-rebase to merge instead"
+tags = ["git", "remote", "pull", "rebase"]
+last_used = ""
+
+[[commands]]
+id = 18
+folder = "git.remote"
+cmd = "git remote set-url origin {new_url}"
+desc = "Change the URL of the origin remote"
+comment = "Useful after migrating from HTTPS to SSH or changing hosts"
+tags = ["git", "remote", "url"]
+last_used = ""
+
+# ── Git · Log & Diff ───────────────────────────────────────────────────────────
+
+[[commands]]
+id = 19
+folder = "git.log"
+cmd = "git log --oneline --graph --decorate --all"
+desc = "Visualize full branch history as an ASCII graph"
+comment = "Alias as 'glog' for quick access"
+tags = ["git", "log", "graph", "history"]
+last_used = ""
+
+[[commands]]
+id = 20
+folder = "git.log"
+cmd = "git log --oneline -20"
+desc = "Show last 20 commits as one-liners"
+comment = "Adjust -20 to any number"
+tags = ["git", "log"]
+last_used = ""
+
+[[commands]]
+id = 21
+folder = "git.log"
+cmd = "git log --author=\"{author}\" --oneline"
+desc = "Filter commits by author"
+comment = "Partial name or email works"
+tags = ["git", "log", "filter"]
+last_used = ""
+
+[[commands]]
+id = 22
+folder = "git.log"
+cmd = "git diff {branch1}..{branch2}"
+desc = "Show diff between two branches"
+comment = "Use HEAD~1..HEAD to diff the last commit"
+tags = ["git", "diff"]
+last_used = ""
+
+[[commands]]
+id = 23
+folder = "git.log"
+cmd = "git show {commit_hash} --stat"
+desc = "Show files changed in a commit"
+comment = "Remove --stat to see full diff output"
+tags = ["git", "diff", "show"]
+last_used = ""
+
+# ── Git · Stash ────────────────────────────────────────────────────────────────
+
+[[commands]]
+id = 24
+folder = "git.stash"
+cmd = "git stash push -m \"{message}\""
+desc = "Stash current changes with a description"
+comment = "Use 'git stash list' to see all stashes"
+tags = ["git", "stash"]
+last_used = ""
+
+[[commands]]
+id = 25
+folder = "git.stash"
+cmd = "git stash pop"
+desc = "Apply most recent stash and remove it"
+comment = "Use 'git stash apply stash@{N}' to apply without removing"
+tags = ["git", "stash", "pop"]
+last_used = ""
+
+[[commands]]
+id = 26
+folder = "git.stash"
+cmd = "git stash list"
+desc = "List all stashes"
+comment = ""
+tags = ["git", "stash", "list"]
+last_used = ""
+
+[[commands]]
+id = 27
+folder = "git.stash"
+cmd = "git stash drop stash@{0}"
+desc = "Delete a specific stash entry"
+comment = "Replace {0} with the stash index from 'git stash list'"
+tags = ["git", "stash", "delete"]
+last_used = ""
+
+# ── Git · Rebase & Reset ───────────────────────────────────────────────────────
+
+[[commands]]
+id = 28
+folder = "git.rebase"
+cmd = "git rebase -i HEAD~{n}"
+desc = "Interactively rebase the last N commits"
+comment = "Use 's'/'f' to squash, 'r' to reword, 'd' to drop"
+tags = ["git", "rebase", "interactive", "squash"]
+last_used = ""
+
+[[commands]]
+id = 29
+folder = "git.rebase"
+cmd = "git rebase {base_branch}"
+desc = "Rebase current branch onto another branch"
+comment = "Resolve conflicts, then 'git rebase --continue'"
+tags = ["git", "rebase"]
+last_used = ""
+
+[[commands]]
+id = 30
+folder = "git.rebase"
+cmd = "git reset --soft HEAD~{n}"
+desc = "Undo last N commits, keep changes staged"
+comment = "Safe undo — changes remain in the index"
+tags = ["git", "reset", "undo"]
+last_used = ""
+
+[[commands]]
+id = 31
+folder = "git.rebase"
+cmd = "git reset --hard HEAD~{n}"
+desc = "Discard last N commits and all their changes"
+comment = "Destructive — uncommitted work will be lost"
+tags = ["git", "reset", "hard"]
+last_used = ""
+
+# ── Docker · Containers ────────────────────────────────────────────────────────
+
+[[commands]]
+id = 32
+folder = "docker.containers"
+cmd = "docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
+desc = "List all containers with status and ports"
+comment = "Remove -a to show only running containers"
+tags = ["docker", "containers", "list"]
+last_used = ""
+
+[[commands]]
+id = 33
+folder = "docker.containers"
+cmd = "docker run -it --rm {image} /bin/sh"
+desc = "Run a container interactively and remove it on exit"
+comment = "Replace /bin/sh with /bin/bash if available"
+tags = ["docker", "containers", "run", "interactive"]
+last_used = ""
+
+[[commands]]
+id = 34
+folder = "docker.containers"
+cmd = "docker logs -f --tail 100 {container}"
+desc = "Stream the last 100 lines of container logs"
+comment = "Combine with grep: docker logs {container} 2>&1 | grep ERROR"
+tags = ["docker", "containers", "logs"]
+last_used = ""
+
+[[commands]]
+id = 35
+folder = "docker.containers"
+cmd = "docker exec -it {container} /bin/sh"
+desc = "Open a shell in a running container"
+comment = "Try /bin/bash if /bin/sh is not available"
+tags = ["docker", "containers", "exec", "shell"]
+last_used = ""
+
+[[commands]]
+id = 36
+folder = "docker.containers"
+cmd = "docker stop {container} && docker rm {container}"
+desc = "Stop and remove a container"
+comment = "Use 'docker rm -f {container}' to force-remove a running container"
+tags = ["docker", "containers", "stop", "remove"]
+last_used = ""
+
+[[commands]]
+id = 37
+folder = "docker.containers"
+cmd = "docker stats --no-stream"
+desc = "Show a snapshot of CPU and memory usage for all containers"
+comment = "Remove --no-stream for live updates"
+tags = ["docker", "containers", "stats", "monitor"]
+last_used = ""
+
+[[commands]]
+id = 38
+folder = "docker.containers"
+cmd = "docker inspect {container} | jq '.[0].NetworkSettings.IPAddress'"
+desc = "Get the IP address of a container"
+comment = "Requires jq; omit the jq part to see full inspect output"
+tags = ["docker", "containers", "inspect", "network"]
+last_used = ""
+
+[[commands]]
+id = 39
+folder = "docker.containers"
+cmd = "docker cp {container}:{src_path} {local_path}"
+desc = "Copy a file from a container to the host"
+comment = "Reverse the order to copy from host to container"
+tags = ["docker", "containers", "copy"]
+last_used = ""
+
+# ── Docker · Images ────────────────────────────────────────────────────────────
+
+[[commands]]
+id = 40
+folder = "docker.images"
+cmd = "docker images --format 'table {{.Repository}}\t{{.Tag}}\t{{.Size}}'"
+desc = "List images with repository, tag, and size"
+comment = ""
+tags = ["docker", "images", "list"]
+last_used = ""
+
+[[commands]]
+id = 41
+folder = "docker.images"
+cmd = "docker build -t {image_name}:{tag} ."
+desc = "Build an image from the current directory Dockerfile"
+comment = "Add --no-cache to force a clean build"
+tags = ["docker", "images", "build"]
+last_used = ""
+
+[[commands]]
+id = 42
+folder = "docker.images"
+cmd = "docker pull {image}:{tag}"
+desc = "Pull an image from a registry"
+comment = "Defaults to Docker Hub if no registry prefix is given"
+tags = ["docker", "images", "pull"]
+last_used = ""
+
+[[commands]]
+id = 43
+folder = "docker.images"
+cmd = "docker rmi $(docker images -f 'dangling=true' -q)"
+desc = "Remove all dangling (untagged) images"
+comment = "Use 'docker image prune' as a simpler alternative"
+tags = ["docker", "images", "cleanup", "prune"]
+last_used = ""
+
+[[commands]]
+id = 44
+folder = "docker.images"
+cmd = "docker tag {source_image} {target_image}"
+desc = "Tag a local image with a new name or registry path"
+comment = "Required before pushing to a private registry"
+tags = ["docker", "images", "tag"]
+last_used = ""
+
+# ── Docker · Compose ───────────────────────────────────────────────────────────
+
+[[commands]]
+id = 45
+folder = "docker.compose"
+cmd = "docker compose up -d"
+desc = "Start all services in detached mode"
+comment = "Add --build to rebuild images before starting"
+tags = ["docker", "compose", "up"]
+last_used = ""
+
+[[commands]]
+id = 46
+folder = "docker.compose"
+cmd = "docker compose down -v"
+desc = "Stop services and remove containers and volumes"
+comment = "Remove -v to keep named volumes"
+tags = ["docker", "compose", "down"]
+last_used = ""
+
+[[commands]]
+id = 47
+folder = "docker.compose"
+cmd = "docker compose logs -f {service}"
+desc = "Stream logs from a specific compose service"
+comment = "Omit the service name to tail all services"
+tags = ["docker", "compose", "logs"]
+last_used = ""
+
+[[commands]]
+id = 48
+folder = "docker.compose"
+cmd = "docker compose ps"
+desc = "List containers managed by docker compose"
+comment = ""
+tags = ["docker", "compose", "list"]
+last_used = ""
+
+[[commands]]
+id = 49
+folder = "docker.compose"
+cmd = "docker compose exec {service} /bin/sh"
+desc = "Open a shell in a running compose service"
+comment = "The service must already be running (use 'up -d' first)"
+tags = ["docker", "compose", "exec", "shell"]
+last_used = ""
+
+# ── Kubernetes · Pods ──────────────────────────────────────────────────────────
+
+[[commands]]
+id = 50
+folder = "k8s.pods"
+cmd = "kubectl get pods -n {namespace}"
+desc = "List all pods in a namespace"
+comment = "Add -o wide for node and IP columns"
+tags = ["k8s", "pods", "list"]
+last_used = ""
+
+[[commands]]
+id = 51
+folder = "k8s.pods"
+cmd = "kubectl get pods -n {namespace} -w"
+desc = "Watch pod status changes in real time"
+comment = "Press Ctrl+C to stop watching"
+tags = ["k8s", "pods", "watch"]
+last_used = ""
+
+[[commands]]
+id = 52
+folder = "k8s.pods"
+cmd = "kubectl logs -f {pod} -n {namespace}"
+desc = "Stream pod logs in real time"
+comment = "Add --tail 100 to limit initial output"
+tags = ["k8s", "pods", "logs"]
+last_used = ""
+
+[[commands]]
+id = 53
+folder = "k8s.pods"
+cmd = "kubectl logs -f {pod} -n {namespace} -c {container}"
+desc = "Stream logs from a specific container in a multi-container pod"
+comment = ""
+tags = ["k8s", "pods", "logs", "container"]
+last_used = ""
+
+[[commands]]
+id = 54
+folder = "k8s.pods"
+cmd = "kubectl delete pod {pod} -n {namespace}"
+desc = "Delete a pod (it will be recreated by the controller)"
+comment = "Use --grace-period=0 --force to delete immediately"
+tags = ["k8s", "pods", "delete"]
+last_used = ""
+
+[[commands]]
+id = 55
+folder = "k8s.pods"
+cmd = "kubectl get pods -A --field-selector=status.phase!=Running"
+desc = "Find all non-running pods across all namespaces"
+comment = "Useful for spotting CrashLoopBackOff or Pending pods"
+tags = ["k8s", "pods", "troubleshoot"]
+last_used = ""
+
+[[commands]]
+id = 56
+folder = "k8s.pods"
+cmd = "kubectl top pods -n {namespace}"
+desc = "Show CPU and memory usage for pods"
+comment = "Requires metrics-server to be installed in the cluster"
+tags = ["k8s", "pods", "metrics", "monitor"]
+last_used = ""
+
+[[commands]]
+id = 57
+folder = "k8s.pods"
+cmd = "kubectl get pods -n {namespace} -o jsonpath='{.items[*].metadata.name}'"
+desc = "Print all pod names in a namespace as a space-separated list"
+comment = "Useful for scripting"
+tags = ["k8s", "pods", "jsonpath"]
+last_used = ""
+
+# ── Kubernetes · Deployments ───────────────────────────────────────────────────
+
+[[commands]]
+id = 58
+folder = "k8s.deploy"
+cmd = "kubectl get deployments -n {namespace}"
+desc = "List all deployments in a namespace"
+comment = ""
+tags = ["k8s", "deploy", "list"]
+last_used = ""
+
+[[commands]]
+id = 59
+folder = "k8s.deploy"
+cmd = "kubectl rollout restart deployment/{deployment} -n {namespace}"
+desc = "Rolling restart a deployment"
+comment = "Triggers a new rollout without changing the spec"
+tags = ["k8s", "deploy", "restart", "rollout"]
+last_used = ""
+
+[[commands]]
+id = 60
+folder = "k8s.deploy"
+cmd = "kubectl rollout status deployment/{deployment} -n {namespace}"
+desc = "Watch the status of a deployment rollout"
+comment = ""
+tags = ["k8s", "deploy", "rollout", "status"]
+last_used = ""
+
+[[commands]]
+id = 61
+folder = "k8s.deploy"
+cmd = "kubectl rollout undo deployment/{deployment} -n {namespace}"
+desc = "Roll back a deployment to the previous revision"
+comment = "Use --to-revision=N to roll back to a specific version"
+tags = ["k8s", "deploy", "rollback"]
+last_used = ""
+
+[[commands]]
+id = 62
+folder = "k8s.deploy"
+cmd = "kubectl scale deployment/{deployment} --replicas={n} -n {namespace}"
+desc = "Scale a deployment to N replicas"
+comment = ""
+tags = ["k8s", "deploy", "scale"]
+last_used = ""
+
+[[commands]]
+id = 63
+folder = "k8s.deploy"
+cmd = "kubectl set image deployment/{deployment} {container}={image}:{tag} -n {namespace}"
+desc = "Update the container image of a deployment"
+comment = "Triggers a rolling update"
+tags = ["k8s", "deploy", "image", "update"]
+last_used = ""
+
+# ── Kubernetes · Debug ─────────────────────────────────────────────────────────
+
+[[commands]]
+id = 64
+folder = "k8s.debug"
+cmd = "kubectl exec -it {pod} -n {namespace} -- /bin/bash"
+desc = "Open an interactive shell inside a running pod"
+comment = "Use /bin/sh if bash is not available in the image"
+tags = ["k8s", "debug", "exec", "shell"]
+last_used = ""
+
+[[commands]]
+id = 65
+folder = "k8s.debug"
+cmd = "kubectl describe pod {pod} -n {namespace}"
+desc = "Show full pod details including events and resource limits"
+comment = "Key section for diagnosing CrashLoopBackOff or ImagePullBackOff"
+tags = ["k8s", "debug", "describe", "troubleshoot"]
+last_used = ""
+
+[[commands]]
+id = 66
+folder = "k8s.debug"
+cmd = "kubectl get events -n {namespace} --sort-by='.lastTimestamp'"
+desc = "List recent cluster events sorted by time"
+comment = "Filter with --field-selector involvedObject.name={pod} for a specific pod"
+tags = ["k8s", "debug", "events"]
+last_used = ""
+
+[[commands]]
+id = 67
+folder = "k8s.debug"
+cmd = "kubectl run debug-pod --image=busybox -it --rm --restart=Never -- /bin/sh"
+desc = "Spin up a temporary busybox pod for debugging"
+comment = "The pod is automatically removed on exit"
+tags = ["k8s", "debug", "busybox", "ephemeral"]
+last_used = ""
+
+[[commands]]
+id = 68
+folder = "k8s.debug"
+cmd = "kubectl port-forward pod/{pod} {local_port}:{pod_port} -n {namespace}"
+desc = "Forward a local port to a port on a pod"
+comment = "Also works with service/{service} instead of pod/"
+tags = ["k8s", "debug", "port-forward", "network"]
+last_used = ""
+
+# ── Linux · Process ────────────────────────────────────────────────────────────
+
+[[commands]]
+id = 69
+folder = "linux.process"
+cmd = "ps aux | grep {process_name}"
+desc = "Find running processes by name"
+comment = ""
+tags = ["linux", "process", "grep"]
+last_used = ""
+
+[[commands]]
+id = 70
+folder = "linux.process"
+cmd = "kill -9 {pid}"
+desc = "Force kill a process by PID"
+comment = "Use 'kill -15' (SIGTERM) first for a graceful shutdown"
+tags = ["linux", "process", "kill"]
+last_used = ""
+
+[[commands]]
+id = 71
+folder = "linux.process"
+cmd = "lsof -i :{port}"
+desc = "Find which process is using a port"
+comment = "On Linux, 'ss -tlnp | grep :{port}' is faster"
+tags = ["linux", "process", "port", "lsof"]
+last_used = ""
+
+[[commands]]
+id = 72
+folder = "linux.process"
+cmd = "top -b -n 1 | head -20"
+desc = "Snapshot of top processes by CPU"
+comment = "Use 'htop' for an interactive view if installed"
+tags = ["linux", "process", "cpu", "monitor"]
+last_used = ""
+
+[[commands]]
+id = 73
+folder = "linux.process"
+cmd = "watch -n 2 'ps aux --sort=-%mem | head -15'"
+desc = "Watch top memory-consuming processes every 2 seconds"
+comment = ""
+tags = ["linux", "process", "memory", "watch"]
+last_used = ""
+
+[[commands]]
+id = 74
+folder = "linux.process"
+cmd = "nohup {command} > {logfile} 2>&1 &"
+desc = "Run a command in the background, immune to hangup"
+comment = "Check output in the logfile; use 'jobs' to list background jobs"
+tags = ["linux", "process", "background", "nohup"]
+last_used = ""
+
+# ── Linux · Network ────────────────────────────────────────────────────────────
+
+[[commands]]
+id = 75
+folder = "linux.network"
+cmd = "curl -I {url}"
+desc = "Fetch HTTP response headers only"
+comment = "Use -L to follow redirects"
+tags = ["linux", "network", "curl", "http"]
+last_used = ""
+
+[[commands]]
+id = 76
+folder = "linux.network"
+cmd = "curl -o /dev/null -s -w \"%{http_code}\" {url}"
+desc = "Print only the HTTP status code of a request"
+comment = ""
+tags = ["linux", "network", "curl", "http", "status"]
+last_used = ""
+
+[[commands]]
+id = 77
+folder = "linux.network"
+cmd = "nc -zv {host} {port}"
+desc = "Test TCP connectivity to a host and port"
+comment = "Use -u for UDP; exit code 0 means connection succeeded"
+tags = ["linux", "network", "nc", "connectivity"]
+last_used = ""
+
+[[commands]]
+id = 78
+folder = "linux.network"
+cmd = "ss -tlnp"
+desc = "List all listening TCP ports with process info"
+comment = "Faster than netstat; -u for UDP"
+tags = ["linux", "network", "ss", "ports"]
+last_used = ""
+
+[[commands]]
+id = 79
+folder = "linux.network"
+cmd = "dig {domain} +short"
+desc = "Resolve a domain name to IP addresses"
+comment = "Add '@8.8.8.8' to query Google's DNS"
+tags = ["linux", "network", "dns", "dig"]
+last_used = ""
+
+[[commands]]
+id = 80
+folder = "linux.network"
+cmd = "tcpdump -i {interface} -n port {port} -w {output.pcap}"
+desc = "Capture traffic on a port and save to a file"
+comment = "Open the .pcap file in Wireshark for analysis"
+tags = ["linux", "network", "tcpdump", "capture"]
+last_used = ""
+
+# ── Linux · Files ──────────────────────────────────────────────────────────────
+
+[[commands]]
+id = 81
+folder = "linux.files"
+cmd = "find {dir} -name \"*.{ext}\" -type f"
+desc = "Find files by extension under a directory"
+comment = "Add -mtime -7 to limit to files modified in the last 7 days"
+tags = ["linux", "files", "find"]
+last_used = ""
+
+[[commands]]
+id = 82
+folder = "linux.files"
+cmd = "du -sh {dir}/* | sort -h"
+desc = "Show disk usage of each item in a directory, sorted by size"
+comment = "Use 'ncdu' for an interactive disk usage explorer"
+tags = ["linux", "files", "disk", "du"]
+last_used = ""
+
+[[commands]]
+id = 83
+folder = "linux.files"
+cmd = "rsync -avz --progress {src}/ {user}@{host}:{dst}/"
+desc = "Sync a local directory to a remote server"
+comment = "Add --delete to remove files on the destination that no longer exist at the source"
+tags = ["linux", "files", "rsync", "sync"]
+last_used = ""
+
+[[commands]]
+id = 84
+folder = "linux.files"
+cmd = "tar -czf {archive.tar.gz} {dir}"
+desc = "Create a gzip-compressed tar archive"
+comment = "Extract with: tar -xzf {archive.tar.gz}"
+tags = ["linux", "files", "tar", "compress"]
+last_used = ""
+
+[[commands]]
+id = 85
+folder = "linux.files"
+cmd = "chmod -R 755 {dir}"
+desc = "Recursively set directory permissions to 755"
+comment = "755 = owner rwx, group/others rx — standard for web roots"
+tags = ["linux", "files", "chmod", "permissions"]
+last_used = ""
+
+# ── Linux · Text ───────────────────────────────────────────────────────────────
+
+[[commands]]
+id = 86
+folder = "linux.text"
+cmd = "grep -rn \"{pattern}\" {dir}"
+desc = "Recursively search for a pattern with line numbers"
+comment = "Add --include='*.py' to limit to specific file types"
+tags = ["linux", "text", "grep", "search"]
+last_used = ""
+
+[[commands]]
+id = 87
+folder = "linux.text"
+cmd = "sed -i 's/{old}/{new}/g' {file}"
+desc = "Replace all occurrences of a string in a file"
+comment = "On macOS, use: sed -i '' 's/{old}/{new}/g' {file}"
+tags = ["linux", "text", "sed", "replace"]
+last_used = ""
+
+[[commands]]
+id = 88
+folder = "linux.text"
+cmd = "awk '{print $1, $3}' {file}"
+desc = "Print the 1st and 3rd fields of each line"
+comment = "Change the field separator with -F, e.g. -F':' for /etc/passwd"
+tags = ["linux", "text", "awk"]
+last_used = ""
+
+[[commands]]
+id = 89
+folder = "linux.text"
+cmd = "sort {file} | uniq -c | sort -rn | head -20"
+desc = "Count and rank unique lines in a file"
+comment = "Classic pattern for log frequency analysis"
+tags = ["linux", "text", "sort", "uniq", "frequency"]
+last_used = ""
+
+[[commands]]
+id = 90
+folder = "linux.text"
+cmd = "jq '.' {file.json}"
+desc = "Pretty-print a JSON file"
+comment = "Use '.field.subfield' to extract a specific path"
+tags = ["linux", "text", "jq", "json"]
+last_used = ""
+
+# ── Dev Tools · Cargo / Rust ───────────────────────────────────────────────────
+
+[[commands]]
+id = 91
+folder = "dev.cargo"
+cmd = "cargo build --release"
+desc = "Build the project in release mode"
+comment = "Output goes to target/release/"
+tags = ["cargo", "rust", "build"]
+last_used = ""
+
+[[commands]]
+id = 92
+folder = "dev.cargo"
+cmd = "cargo test -- --nocapture"
+desc = "Run all tests and show println! output"
+comment = "Add a test name after '--' to run a single test"
+tags = ["cargo", "rust", "test"]
+last_used = ""
+
+[[commands]]
+id = 93
+folder = "dev.cargo"
+cmd = "cargo clippy -- -D warnings"
+desc = "Run clippy and treat all warnings as errors"
+comment = "Typically used in CI to enforce code quality"
+tags = ["cargo", "rust", "clippy", "lint"]
+last_used = ""
+
+[[commands]]
+id = 94
+folder = "dev.cargo"
+cmd = "cargo add {crate}"
+desc = "Add a dependency to Cargo.toml"
+comment = "Use '@{version}' to pin a specific version"
+tags = ["cargo", "rust", "dependency"]
+last_used = ""
+
+[[commands]]
+id = 95
+folder = "dev.cargo"
+cmd = "cargo watch -x 'test -- --nocapture'"
+desc = "Re-run tests on every file save"
+comment = "Requires cargo-watch: cargo install cargo-watch"
+tags = ["cargo", "rust", "watch", "test"]
+last_used = ""
+
+[[commands]]
+id = 96
+folder = "dev.cargo"
+cmd = "cargo update"
+desc = "Update all dependencies to their latest compatible versions"
+comment = "Rewrites Cargo.lock; review the diff before committing"
+tags = ["cargo", "rust", "update"]
+last_used = ""
+
+# ── Dev Tools · npm / Node ─────────────────────────────────────────────────────
+
+[[commands]]
+id = 97
+folder = "dev.npm"
+cmd = "npm install"
+desc = "Install project dependencies from package.json"
+comment = "Use 'npm ci' in CI for reproducible installs"
+tags = ["npm", "node", "install"]
+last_used = ""
+
+[[commands]]
+id = 98
+folder = "dev.npm"
+cmd = "npm run {script}"
+desc = "Run a script defined in package.json"
+comment = "List available scripts with 'npm run'"
+tags = ["npm", "node", "script"]
+last_used = ""
+
+[[commands]]
+id = 99
+folder = "dev.npm"
+cmd = "npm outdated"
+desc = "List packages with available updates"
+comment = "Run 'npm update' to upgrade to the latest allowed versions"
+tags = ["npm", "node", "outdated", "update"]
+last_used = ""
+
+[[commands]]
+id = 100
+folder = "dev.npm"
+cmd = "npx {package} {args}"
+desc = "Execute an npm package without installing it globally"
+comment = "Downloads the package on demand if not cached"
+tags = ["npm", "node", "npx"]
+last_used = ""
+
+[[commands]]
+id = 101
+folder = "dev.npm"
+cmd = "npm ls --depth=0"
+desc = "List top-level installed packages"
+comment = "Remove --depth=0 to see the full dependency tree"
+tags = ["npm", "node", "list"]
+last_used = ""
+
+# ── Dev Tools · SSH & Keys ─────────────────────────────────────────────────────
+
+[[commands]]
+id = 102
+folder = "dev.ssh"
+cmd = "ssh -i {key.pem} {user}@{host}"
+desc = "SSH into a host using a key file"
+comment = "Ensure key permissions are 600: chmod 600 {key.pem}"
+tags = ["ssh", "remote"]
+last_used = ""
+
+[[commands]]
+id = 103
+folder = "dev.ssh"
+cmd = "ssh-keygen -t ed25519 -C \"{email}\" -f ~/.ssh/{key_name}"
+desc = "Generate a new ED25519 SSH key pair"
+comment = "More secure and faster than RSA; supported by GitHub and GitLab"
+tags = ["ssh", "keygen", "keys"]
+last_used = ""
+
+[[commands]]
+id = 104
+folder = "dev.ssh"
+cmd = "ssh-copy-id -i ~/.ssh/{key_name}.pub {user}@{host}"
+desc = "Copy your public key to a remote host's authorized_keys"
+comment = "Enables passwordless login after this step"
+tags = ["ssh", "keys", "authorized"]
+last_used = ""
+
+[[commands]]
+id = 105
+folder = "dev.ssh"
+cmd = "ssh -L {local_port}:localhost:{remote_port} {user}@{host}"
+desc = "Create an SSH tunnel forwarding a remote port to local"
+comment = "Useful for accessing remote services (databases, UIs) securely"
+tags = ["ssh", "tunnel", "port-forward"]
+last_used = ""
+
+# ── Python · Virtual Env ───────────────────────────────────────────────────────
+
+[[commands]]
+id = 106
+folder = "python.env"
+cmd = "python3 -m venv {env_name}"
+desc = "Create a Python virtual environment"
+comment = "Activate with: source {env_name}/bin/activate"
+tags = ["python", "venv", "env"]
+last_used = ""
+
+[[commands]]
+id = 107
+folder = "python.env"
+cmd = "source {env_name}/bin/activate"
+desc = "Activate a virtual environment"
+comment = "Deactivate with: deactivate"
+tags = ["python", "venv", "activate"]
+last_used = ""
+
+[[commands]]
+id = 108
+folder = "python.env"
+cmd = "pip freeze > requirements.txt"
+desc = "Save installed packages to requirements.txt"
+comment = "Use 'pip install -r requirements.txt' to restore"
+tags = ["python", "venv", "requirements", "pip"]
+last_used = ""
+
+[[commands]]
+id = 109
+folder = "python.env"
+cmd = "python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt"
+desc = "Create, activate venv, and install requirements in one shot"
+comment = ""
+tags = ["python", "venv", "setup"]
+last_used = ""
+
+[[commands]]
+id = 110
+folder = "python.env"
+cmd = "pyenv local {version}"
+desc = "Set the Python version for the current directory"
+comment = "Requires pyenv; run 'pyenv versions' to list available versions"
+tags = ["python", "pyenv", "version"]
+last_used = ""
+
+# ── Python · pip ───────────────────────────────────────────────────────────────
+
+[[commands]]
+id = 111
+folder = "python.pip"
+cmd = "pip install {package}=={version}"
+desc = "Install a specific version of a package"
+comment = "Omit the version pin to install the latest"
+tags = ["python", "pip", "install"]
+last_used = ""
+
+[[commands]]
+id = 112
+folder = "python.pip"
+cmd = "pip list --outdated"
+desc = "List installed packages with available upgrades"
+comment = "Upgrade a package with: pip install --upgrade {package}"
+tags = ["python", "pip", "outdated", "upgrade"]
+last_used = ""
+
+[[commands]]
+id = 113
+folder = "python.pip"
+cmd = "pip show {package}"
+desc = "Show metadata for an installed package"
+comment = "Includes version, location, and dependencies"
+tags = ["python", "pip", "info"]
+last_used = ""
+
+[[commands]]
+id = 114
+folder = "python.pip"
+cmd = "pip install -e ."
+desc = "Install the current package in editable (development) mode"
+comment = "Code changes are reflected immediately without reinstalling"
+tags = ["python", "pip", "editable", "dev"]
 last_used = ""

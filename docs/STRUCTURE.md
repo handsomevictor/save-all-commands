@@ -1,73 +1,118 @@
-# 项目结构说明
+# Project Structure
 
 ```
 save-all-commands/
-├── Cargo.toml              # 项目依赖配置
+├── Cargo.toml              # Dependency manifest and package metadata
+├── commands.toml.example   # Bundled example command library (~100 commands)
 ├── src/
-│   ├── lib.rs              # 库入口，导出所有模块
-│   ├── main.rs             # 二进制入口，CLI 解析与子命令分发
-│   ├── cli.rs              # clap derive 宏定义所有子命令和参数
-│   ├── config.rs           # 配置文件读写（~/.sac/config.toml）
-│   ├── store.rs            # 命令存储读写（~/.sac/commands.toml）
-│   ├── search.rs           # 搜索逻辑（模糊搜索 + 精确搜索 + 加权评分）
-│   ├── sync.rs             # 远端同步（HTTP 下载、diff、用户确认）
-│   ├── shell.rs            # Shell Integration（zsh/bash/fish）
+│   ├── lib.rs              # Library crate root; re-exports all modules
+│   ├── main.rs             # Binary entry point; CLI parsing and sub-command dispatch
+│   ├── cli.rs              # clap derive-macro definitions for all sub-commands and flags
+│   ├── config.rs           # Config file read/write (~/.sac/config.toml)
+│   ├── store.rs            # Command store read/write (~/.sac/commands.toml)
+│   ├── search.rs           # Search engine (fuzzy + exact + weighted scoring)
+│   ├── sync.rs             # Remote HTTP sync (download, diff, user-confirmed write)
+│   ├── shell.rs            # Shell integration generator (zsh / bash / fish)
 │   └── tui/
-│       ├── mod.rs          # TUI 模块入口，run_tui 函数
-│       ├── app.rs          # App 状态机（Mode、BrowseItem、键盘事件处理）
-│       └── ui.rs           # ratatui 渲染逻辑
+│       ├── mod.rs          # TUI module root; exports run_tui()
+│       ├── app.rs          # App state machine (Mode, BrowseItem, keyboard event handling)
+│       └── ui.rs           # ratatui rendering (layout, tables, search box, status bar)
 ├── tests/
-│   ├── test_store.rs       # Store 读写、查询、validate 测试
-│   ├── test_config.rs      # Config 读写、set 方法测试
-│   ├── test_validation.rs  # 约束检查（folder/command 数量上限）测试
-│   ├── test_search.rs      # 模糊搜索、精确搜索、中文、空 query 测试
-│   ├── test_cli.rs         # CLI 子命令解析测试
-│   └── test_sync.rs        # diff 逻辑、格式校验测试
+│   ├── test_store.rs       # Store CRUD, query, and validation tests
+│   ├── test_config.rs      # Config read/write and set() method tests
+│   ├── test_validation.rs  # Constraint enforcement (folder/command count limits)
+│   ├── test_search.rs      # Fuzzy search, exact search, Unicode, empty-query tests
+│   ├── test_cli.rs         # CLI sub-command parsing tests
+│   └── test_sync.rs        # Diff logic and format validation tests
 └── docs/
-    ├── README.md           # 项目介绍、安装、快速上手（本文件）
-    ├── PROGRESS.md         # 版本更新记录
-    ├── STRUCTURE.md        # 项目结构说明（本文件）
-    ├── LESSON_LEARNED.md   # 开发过程 bug 记录
-    ├── TUTORIAL.md         # 完整功能使用说明
-    └── COMMANDS.md         # 纯命令列表（本地测试用）
+    ├── README_CN.md        # Chinese README
+    ├── PROGRESS.md         # Changelog (English)
+    ├── PROGRESS_CN.md      # Changelog (Chinese)
+    ├── STRUCTURE.md        # Project structure (this file, English)
+    ├── STRUCTURE_CN.md     # Project structure (Chinese)
+    ├── LESSON_LEARNED.md   # Development bug log (English)
+    ├── LESSON_LEARNED_CN.md # Development bug log (Chinese)
+    ├── TUTORIAL.md         # Full feature reference (English)
+    ├── TUTORIAL_CN.md      # Full feature reference (Chinese)
+    ├── COMMANDS.md         # CLI quick-reference (English)
+    ├── COMMANDS_CN.md      # CLI quick-reference (Chinese)
+    └── assets/
+        └── screenshot.png  # TUI interface screenshot
 ```
 
 ---
 
-## 模块说明
+## Module Reference
 
 ### `src/main.rs`
 
-二进制入口。解析命令行参数，根据子命令分发到对应的处理函数。无子命令时启动 TUI。
+Binary entry point. Parses command-line arguments via clap and dispatches to the appropriate handler function. Invoked with no sub-command, starts the TUI.
 
 ### `src/cli.rs`
 
-使用 clap derive 宏定义所有子命令结构体和参数，提供类型安全的 CLI 解析。
+Defines all sub-command structs and argument types using clap's derive macros. Provides type-safe, self-documenting CLI parsing with automatic `--help` generation.
 
 ### `src/config.rs`
 
-负责读写 `~/.sac/config.toml`。提供 `Config` 结构体，支持通过键值路径（如 `general.auto_check_remote`）读取和修改配置项。
+Manages `~/.sac/config.toml`. Exposes a `Config` struct with typed fields for all settings. Supports reading and updating individual values by dot-notation key path (e.g. `general.auto_check_remote`).
 
 ### `src/store.rs`
 
-负责读写 `~/.sac/commands.toml`。提供 `Store` 结构体，管理 folder 树和命令列表，支持增删改查及结构校验。
+Manages `~/.sac/commands.toml`. The `Store` struct holds a flat list of `Folder` and `Command` records and provides methods for:
+- Tree traversal (`children_folders`, `folder_commands`, `breadcrumb`)
+- Structural validation (combined per-folder limit of 10)
+- Auto-repair of duplicate command IDs (`auto_fix_ids`)
 
 ### `src/search.rs`
 
-实现两种搜索模式：
-- **模糊搜索**：使用 nucleo-matcher 对命令名称和描述进行加权评分排序
-- **精确搜索**：当 query 以 `//` 开头时，对命令内容进行精确子字符串匹配
+Implements two search modes via `Searcher`:
+
+- **Fuzzy search** (`fuzzy_search`) — uses [nucleo-matcher](https://github.com/helix-editor/nucleo) for weighted fuzzy scoring across `cmd`, `desc`, `comment`, and `tags`. Results are ranked by priority tiers: tag match → cmd exact → desc exact → comment exact → fuzzy score. Tie-breaks use `last_used` timestamp, then command ID.
+- **Exact search** (`exact_search`) — triggered by the `//` prefix; returns commands whose combined haystack contains the query as a literal substring.
 
 ### `src/sync.rs`
 
-通过 HTTP 从远端 URL 下载命令数据，与本地数据进行 diff 比较，向用户展示差异，确认后写入本地。
+Fetches a remote TOML file via HTTP GET, parses it as a `Store`, computes a human-readable diff against the local store, displays added/modified/removed commands, and writes on user confirmation. Supports `--force` to skip the confirmation prompt.
 
 ### `src/shell.rs`
 
-生成 zsh、bash、fish 的 shell 集成脚本，并写入对应的 shell 配置文件。集成后，TUI 选中命令时会通过特定机制将命令填入终端输入栏。
+Generates and installs shell integration snippets for zsh, bash, and fish. The integration:
+1. Guards TUI entry with an argument count check — sub-commands pass through directly
+2. Runs `sac` in the foreground with stdout redirected to a tmpfile (avoids `$()` / ZLE conflict)
+3. Reads the tmpfile and writes the result to the shell's input buffer (`BUFFER` in zsh/bash, `commandline` in fish)
+4. Detects ZLE context (`if zle`) before calling ZLE builtins to avoid "widgets can only be called when ZLE is active" errors
 
-### `src/tui/`
+`write_integration()` detects both the current and legacy snippet formats and performs a clean in-place upgrade.
 
-基于 ratatui 构建的 TUI 界面：
-- `app.rs`：维护应用状态机，处理键盘事件，在浏览模式和搜索模式之间切换
-- `ui.rs`：根据当前状态渲染界面布局、命令列表、搜索框等组件
+### `src/tui/mod.rs`
+
+Entry point for the TUI. Opens `/dev/tty` write-only as the ratatui backend (bypasses any stdout/stderr redirection in the shell invocation chain). Runs the main event loop: render → read key event → update app state → repeat. Restores terminal state on exit via `let _ =` wrapped cleanup calls.
+
+### `src/tui/app.rs`
+
+The `App` struct is the central state machine. It owns:
+- `mode: Mode` — `Browse` or `Search`
+- `search_mode: SearchMode` — `Fuzzy` or `Exact`
+- `current_folder`, `breadcrumb` — navigation state
+- `items: Vec<BrowseItem>` — current folder contents (folders + commands)
+- `search_query`, `search_results`, `search_selected` — search state
+- `output: Option<String>` — command to paste when quitting
+
+Key methods: `handle_key()`, `enter_folder()`, `go_back()`, `load_items()`, `confirm_command()`, `refresh_search()`, `effective_query()`.
+
+### `src/tui/ui.rs`
+
+Renders the TUI using ratatui. Layout (top to bottom):
+
+1. **Header** (1 line) — key hint bar
+2. **Search box** (3 lines) — query input with mode label
+3. **Main panel** (fills remaining space) — Browse table or Search results table
+4. **Status bar** (1 line) — item counts or search statistics
+
+Both tables use a three-column layout:
+
+| Column | Width | Content |
+|--------|-------|---------|
+| Number | 6 chars | `[1]`–`[0]`, blank beyond 10 |
+| Command | ~52% of available, clamped 20–52 | `$  <cmd>` truncated with `…` |
+| Description | remaining | Word-wrapped desc (max 3 lines) + meta line in search mode |

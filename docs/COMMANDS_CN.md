@@ -1,6 +1,6 @@
-# CLI Quick Reference
+# CLI 命令速查
 
-## Launch TUI
+## 进入 TUI
 
 ```bash
 sac
@@ -8,7 +8,7 @@ sac
 
 ---
 
-## Add Commands
+## 添加命令
 
 ```bash
 sac add
@@ -17,7 +17,7 @@ sac add --folder <folder-id>
 
 ---
 
-## Manage Folders
+## 管理 Folder
 
 ```bash
 sac new-folder <name>
@@ -26,7 +26,7 @@ sac new-folder <name> --parent <folder-id>
 
 ---
 
-## Edit / Delete
+## 编辑/删除命令
 
 ```bash
 sac edit <command-id>
@@ -35,7 +35,7 @@ sac delete <command-id>
 
 ---
 
-## Sync
+## 同步
 
 ```bash
 sac sync
@@ -44,7 +44,7 @@ sac sync --force
 
 ---
 
-## Configuration
+## 配置
 
 ```bash
 sac config
@@ -57,7 +57,7 @@ sac config set shell.type zsh
 
 ---
 
-## File Paths
+## 查看文件路径
 
 ```bash
 sac where config
@@ -66,7 +66,7 @@ sac where commands
 
 ---
 
-## Shell Integration
+## Shell 集成
 
 ```bash
 sac install
@@ -74,7 +74,7 @@ sac install
 
 ---
 
-## Import / Export
+## 导入/导出
 
 ```bash
 sac export <path>
@@ -83,7 +83,7 @@ sac import <path>
 
 ---
 
-## Version
+## 版本与帮助
 
 ```bash
 sac --version

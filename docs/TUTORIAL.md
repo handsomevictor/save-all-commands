@@ -1,10 +1,16 @@
-# 完整功能使用说明
+# Full Feature Reference
 
-## 1. 安装与初始化
+## 1. Installation
 
-### 安装
+### Prerequisites
 
-确保已安装 Rust 工具链（推荐通过 [rustup](https://rustup.rs/) 安装），然后执行：
+Install the Rust toolchain via [rustup](https://rustup.rs/) if you haven't already:
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+### Build and Install
 
 ```bash
 git clone https://github.com/handsomevictor/save-all-commands.git
@@ -12,354 +18,338 @@ cd save-all-commands
 cargo install --path .
 ```
 
-安装成功后，`sac` 命令即可在任意目录使用。
+`sac` is installed to `~/.cargo/bin/sac`. Ensure `~/.cargo/bin` is in your `PATH`.
 
-### 首次运行
-
-直接执行 `sac` 会启动 TUI 界面。若 `~/.sac/` 目录不存在，`sac` 会在首次运行时自动创建，并生成默认的配置文件和命令文件。
-
----
-
-## 2. Shell 集成（sac install）
-
-Shell 集成是 `sac` 的核心功能之一。启用后，在 TUI 中选中命令并按 Enter，该命令会直接填入当前终端的输入栏，让你确认后再执行。
-
-### 安装 Shell 集成
-
-```bash
-sac install
-```
-
-执行后，`sac` 会提示你选择 shell 类型：
-
-- `zsh`：向 `~/.zshrc` 写入集成脚本
-- `bash`：向 `~/.bashrc` 写入集成脚本
-- `fish`：向 Fish 配置目录写入集成脚本
-
-选择完成后，重新加载 shell 配置：
-
-```bash
-# zsh
-source ~/.zshrc
-
-# bash
-source ~/.bashrc
-
-# fish
-source ~/.config/fish/config.fish
-```
-
-### 验证集成
-
-重新加载后，执行 `sac`，在 TUI 中选中任意命令按 Enter，若命令出现在终端输入栏，则集成成功。
-
----
-
-## 3. TUI 使用
-
-### 启动
+### First Run
 
 ```bash
 sac
 ```
 
-TUI 分为两种模式：**浏览模式**和**搜索模式**。
+On first launch, `sac` auto-creates `~/.sac/` with default config and an empty commands file. To start with example data:
 
-### 浏览模式
-
-启动时默认进入浏览模式，以树状结构展示所有 folder 和命令。
-
-| 键位 | 功能 |
-|------|------|
-| `↑` / `k` | 向上移动光标 |
-| `↓` / `j` | 向下移动光标 |
-| `Enter` | 选中当前命令，写入终端输入栏后退出 TUI |
-| `/` | 进入搜索模式 |
-| `q` / `Esc` | 退出 TUI |
-
-Folder 节点可以展开/折叠，方便浏览大量命令。
-
-### 搜索模式
-
-按 `/` 后进入搜索模式，顶部会显示搜索输入框。
-
-| 键位 | 功能 |
-|------|------|
-| 输入字符 | 实时过滤并排序命令列表 |
-| `↑` / `↓` | 在搜索结果中移动光标 |
-| `Enter` | 选中当前命令，写入终端输入栏后退出 TUI |
-| `Backspace` | 删除最后一个搜索字符 |
-| `Esc` | 清空搜索词，返回浏览模式 |
-
-### 精确搜索（// 前缀）
-
-在搜索模式下，以 `//` 开头输入搜索词，会切换为精确子字符串匹配，结果不经过模糊评分。
-
-示例：
-
+```bash
+mkdir -p ~/.sac
+cp /path/to/save-all-commands/commands.toml.example ~/.sac/commands.toml
 ```
-// git commit
-```
-
-仅显示命令内容中包含字面字符串 `git commit` 的结果。
 
 ---
 
-## 4. 管理命令
+## 2. Shell Integration
 
-### 添加命令（sac add）
+Shell integration is what makes `sac` useful. Without it, selecting a command only prints it to stdout. With it, the command is pasted directly into your terminal input bar for you to review and run.
 
-交互式添加一条命令到根 folder：
-
-```bash
-sac add
-```
-
-添加命令到指定 folder：
+### Install
 
 ```bash
-sac add --folder <folder-id>
+sac install
 ```
 
-执行后，`sac` 会提示输入：
-- 命令内容（必填）
-- 命令名称/描述（可选）
+`sac` will write the appropriate snippet to your shell's rc file and display the path. Then reload:
 
-### 编辑命令（sac edit）
+```bash
+source ~/.zshrc         # zsh
+source ~/.bashrc        # bash
+source ~/.config/fish/config.fish   # fish
+```
+
+### How it works
+
+The integration uses a tmpfile approach to avoid the ZLE conflict that arises with `$()` sub-shells:
+
+```bash
+# Simplified zsh integration
+sac() {
+  if [[ $# -eq 0 ]]; then
+    local tmp
+    tmp=$(mktemp)
+    command sac >"$tmp" 2>/dev/tty
+    local result
+    result=$(<"$tmp")
+    rm -f "$tmp"
+    if [[ -n "$result" ]]; then
+      if zle; then
+        BUFFER=$result
+        CURSOR=${#BUFFER}
+        zle redisplay
+      else
+        print -z -- "$result"
+      fi
+    fi
+  else
+    command sac "$@"
+  fi
+}
+```
+
+Key properties:
+- `sac` runs in the **foreground** (no `$()`), so ZLE does not intercept stdin
+- Stdout is redirected to a tmpfile; TUI rendering goes to `/dev/tty`
+- ZLE context is detected with `if zle` before setting `BUFFER`
+- Sub-commands (`sac add`, `sac --version`, etc.) pass through unmodified
+
+### Upgrading the integration
+
+If you previously installed an older version, `sac install` automatically detects and replaces the legacy snippet.
+
+---
+
+## 3. TUI Usage
+
+### Launching
+
+```bash
+sac
+```
+
+The TUI has two modes: **Browse** and **Search**.
+
+### Browse Mode
+
+The default mode. Displays the current folder's contents as a numbered list: subfolders first (shown in cyan with a 📁 icon), then commands.
+
+| Key | Action |
+|-----|--------|
+| `1`–`9` / `0` | Navigate directly to the item at that position |
+| `↑` / `↓` | Move cursor |
+| `Enter` | Enter folder or select command |
+| `q` / `Esc` | Go up one folder level; exit at root |
+| Any printable character | Append to search query, enter Search mode |
+| `Ctrl+C` | Exit without output |
+
+### Search Mode
+
+Activated automatically as soon as you type. All commands are searched in real time across `cmd`, `desc`, `comment`, and `tags`.
+
+| Key | Action |
+|-----|--------|
+| Continue typing | Append characters, update results live |
+| `1`–`9` / `0` | Immediately select the result at that position |
+| `↑` / `↓` | Move cursor through results |
+| `Enter` | Select highlighted result |
+| `Backspace` | Delete last character (Unicode-safe) |
+| `Esc` | Clear query, return to Browse mode |
+| `Ctrl+C` | Exit without output |
+
+### Vim-style activation
+
+Typing `/` as the first character activates Search mode using vim conventions. The `/` is stripped from the actual query, so `/doc` searches for `doc`. To reach Exact mode, type `//query`.
+
+### Exact Search (`//` prefix)
+
+Prefixing your query with `//` switches to exact substring matching — no fuzzy scoring. Only commands whose combined text (`cmd + desc + comment + tags`) contains the literal string are returned.
+
+```
+//kubectl exec    →  returns only commands containing "kubectl exec" verbatim
+```
+
+### Selecting a Command
+
+Press the number key or Enter on a highlighted result. The command text is written to your shell's input buffer. You can then:
+- Replace `{placeholder}` values with real arguments
+- Add or remove flags
+- Press Enter to execute — or press `Ctrl+C` to discard
+
+`sac` itself never executes any command.
+
+---
+
+## 4. Managing Commands
+
+### Add a command
+
+```bash
+sac add                          # prompt for folder, cmd, desc, comment, tags
+sac add --folder <folder-id>     # pre-select a folder
+```
+
+### Edit a command
 
 ```bash
 sac edit <command-id>
 ```
 
-通过命令 ID 编辑已存在的命令内容和描述。
+Opens an interactive prompt with the current field values pre-filled. Press Enter to keep a field unchanged.
 
-### 删除命令（sac delete）
+### Delete a command
 
 ```bash
 sac delete <command-id>
 ```
 
-通过命令 ID 删除一条命令。删除前会要求确认。
+Prompts for confirmation before deleting.
 
 ---
 
-## 5. 管理 Folder
+## 5. Managing Folders
 
-### 创建 Folder（sac new-folder）
-
-在根目录创建新 folder：
+### Create a folder
 
 ```bash
-sac new-folder <name>
+sac new-folder <name>                        # create at root level
+sac new-folder <name> --parent <folder-id>  # create as sub-folder
 ```
 
-在指定父 folder 下创建子 folder：
+### Per-folder limit
 
-```bash
-sac new-folder <name> --parent <folder-id>
-```
+Each folder may contain at most **10 items total** (subfolders + commands). This matches the `1`–`9` / `0` TUI key layout. Operations that would exceed this limit are rejected with an error.
 
-### 层级约束
+### Finding folder IDs
 
-每个 folder 最多包含：
-- **10 个子 folder**
-- **10 条命令**
-
-超出限制时，`sac` 会拒绝操作并给出错误提示。
+Folder IDs use dot-notation hierarchy. The root folder has `id = ""`. Browse the TUI or run `sac where commands` to open the file and read the IDs directly.
 
 ---
 
-## 6. 配置管理
+## 6. Configuration
 
-### 查看当前配置（sac config）
+### View current configuration
 
 ```bash
 sac config
 ```
 
-输出当前 `~/.sac/config.toml` 的所有配置项。
+Displays the full contents of `~/.sac/config.toml`.
 
-### 修改配置（sac config set）
+### Modify a value
 
 ```bash
 sac config set <key> <value>
 ```
 
-支持的配置键：
+Supported keys:
 
-| 键 | 说明 | 示例值 |
-|----|------|--------|
-| `general.auto_check_remote` | 启动时自动检查远端更新 | `true` / `false` |
-| `commands_source.mode` | 命令来源模式 | `local` / `remote` |
-| `commands_source.url` | 远端命令源 URL | `https://example.com/commands.toml` |
-| `shell.type` | Shell 类型 | `zsh` / `bash` / `fish` |
+| Key | Description | Values |
+|-----|-------------|--------|
+| `general.auto_check_remote` | Auto-check remote on daily first launch | `true` / `false` |
+| `commands_source.mode` | Command source | `local` / `remote` |
+| `commands_source.path` | Local file path | any path (supports `~`) |
+| `commands_source.url` | Remote TOML URL | any HTTP/HTTPS URL |
+| `shell.type` | Shell type for integration | `zsh` / `bash` / `fish` |
 
-示例：
+### Examples
 
 ```bash
-# 关闭自动检查远端
+# Switch to remote mode and set a GitHub Gist URL
+sac config set commands_source.mode remote
+sac config set commands_source.url https://gist.githubusercontent.com/yourname/xxx/raw/commands.toml
+
+# Disable auto-checking on startup
 sac config set general.auto_check_remote false
 
-# 切换为远端模式
-sac config set commands_source.mode remote
-
-# 设置远端 URL
-sac config set commands_source.url https://example.com/commands.toml
-
-# 设置 shell 类型
-sac config set shell.type zsh
+# Change shell type
+sac config set shell.type bash
 ```
 
 ---
 
-## 7. 文件路径查询（sac where）
-
-查看配置文件的绝对路径：
+## 7. File Paths
 
 ```bash
-sac where config
+sac where config     # print path to config.toml
+sac where commands   # print path to commands.toml
 ```
 
-查看命令文件的绝对路径：
-
-```bash
-sac where commands
-```
-
-这对于手动编辑文件或备份数据非常有用。
+Both paths are expanded (no `~` shorthand). Use these for scripting, backups, or opening the files in your editor.
 
 ---
 
-## 8. 导入/导出
+## 8. Import and Export
 
-### 导出命令（sac export）
-
-将当前命令数据导出为 TOML 文件：
+### Export
 
 ```bash
-sac export <path>
+sac export ~/backup/commands.toml
 ```
 
-示例：
+Copies the current commands file to the specified path.
+
+### Import
 
 ```bash
-sac export ~/backup/commands_backup.toml
+sac import ~/backup/commands.toml
 ```
 
-### 导入命令（sac import）
-
-从 TOML 文件导入命令数据：
-
-```bash
-sac import <path>
-```
-
-示例：
-
-```bash
-sac import ~/backup/commands_backup.toml
-```
-
-导入时，`sac` 会校验文件格式，确保数据合法后再写入。
+Validates the file format, then replaces the current commands file. Invalid files are rejected before any write occurs.
 
 ---
 
-## 9. 远端同步
+## 9. Remote Sync
 
-### 手动同步（sac sync）
-
-从配置的远端 URL 拉取最新命令数据，与本地进行 diff 比对，展示差异后由用户确认是否写入：
+### Manual sync
 
 ```bash
 sac sync
 ```
 
-### 强制同步（sac sync --force）
+1. Fetches the TOML file from `commands_source.url`
+2. Parses and validates it
+3. Computes a diff against local data
+4. Displays added, modified, and removed commands
+5. Prompts for confirmation
+6. Writes the remote data on confirmation
 
-跳过用户确认，直接用远端数据覆盖本地：
+### Force sync
 
 ```bash
 sac sync --force
 ```
 
-**注意**：`--force` 会覆盖本地所有修改，使用前请确认已备份重要数据。
+Skips the confirmation prompt and overwrites local data immediately. Use with caution — any local changes not in the remote will be lost.
 
-### 同步流程
+### Auto-check on startup
 
-1. `sac` 向 `commands_source.url` 发起 HTTP GET 请求，下载远端 TOML 数据
-2. 解析远端数据，与本地数据进行 diff
-3. 在终端展示新增、修改、删除的命令列表
-4. 提示用户确认（`--force` 时跳过此步）
-5. 用户确认后，将远端数据写入 `~/.sac/commands.toml`
+When `general.auto_check_remote = true` (the default) and `commands_source.mode = "remote"`, `sac` checks for remote updates once per day on first launch. If no network is available, the check is silently skipped.
 
 ---
 
-## 10. 自动检查远端（auto_check_remote）
+## 10. commands.toml Format Reference
 
-配置项 `general.auto_check_remote` 控制 `sac` 启动时是否自动检查远端更新。
+### Folder fields
 
-- 默认值：`true`
-- 设为 `false` 后，每次启动 TUI 时不再自动拉取远端数据
-- 仍可通过 `sac sync` 手动触发同步
+| Field | Type | Required | Description |
+|-------|------|:--------:|-------------|
+| `id` | string | ✅ | Unique identifier; use dot-notation for hierarchy (`devops.k8s.debug`) |
+| `parent` | string | ✅ | Parent folder `id`; root folders use `""` |
+| `name` | string | ✅ | Display name shown in the TUI |
 
-关闭自动检查：
+### Command fields
 
-```bash
-sac config set general.auto_check_remote false
+| Field | Type | Required | Description |
+|-------|------|:--------:|-------------|
+| `id` | integer | ✅ | Unique numeric ID; recommended to increment from 1 |
+| `folder` | string | ✅ | `id` of the containing folder |
+| `cmd` | string | ✅ | Command text; use `{placeholder}` for variable parts |
+| `desc` | string | ✅ | Short description shown in the TUI; included in search |
+| `comment` | string | | Extended notes; searchable but not shown in the main list |
+| `tags` | string[] | | Search tags; tag matches receive the highest search priority |
+| `last_used` | string | | ISO 8601 timestamp; auto-managed by `sac` |
+
+### Multi-line commands
+
+Use TOML literal strings (triple single-quotes) for commands that span multiple lines. Backslashes are preserved literally:
+
+```toml
+cmd = '''
+aws s3 sync s3://{bucket}/{prefix}/ . \
+  --exclude "*.tmp" \
+  --delete
+'''
 ```
 
----
-
-## 11. 数据格式说明（commands.toml 结构）
-
-`~/.sac/commands.toml` 使用 TOML 格式存储命令数据，基本结构如下：
+### Minimal template
 
 ```toml
 [[folders]]
-id = "folder-uuid-1"
-name = "Git"
-parent_id = ""        # 空字符串表示根 folder
-
-[[folders]]
-id = "folder-uuid-2"
-name = "Docker"
-parent_id = ""
+id     = "my-folder"
+parent = ""
+name   = "My Commands"
 
 [[commands]]
-id = "cmd-uuid-1"
-name = "提交所有更改"
-command = "git add . && git commit -m ''"
-folder_id = "folder-uuid-1"
-
-[[commands]]
-id = "cmd-uuid-2"
-name = "查看运行中的容器"
-command = "docker ps"
-folder_id = "folder-uuid-2"
+id        = 1
+folder    = "my-folder"
+cmd       = "echo hello"
+desc      = "Print hello"
+comment   = ""
+tags      = []
+last_used = ""
 ```
-
-字段说明：
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `id` | string | UUID，唯一标识符 |
-| `name` | string | 显示名称 / 描述 |
-| `command` | string | 实际命令内容 |
-| `folder_id` | string | 所属 folder 的 ID |
-| `parent_id` | string | 父 folder 的 ID，根 folder 为空字符串 |
-
----
-
-## 12. 层级约束说明
-
-为保持界面可读性和性能，`sac` 对数据结构施加以下约束：
-
-- 每个 folder 最多包含 **10 个直接子 folder**
-- 每个 folder 最多包含 **10 条命令**
-
-这些约束在以下操作时会被校验：
-- `sac add`：添加命令时检查目标 folder 的命令数量
-- `sac new-folder`：创建子 folder 时检查父 folder 的子 folder 数量
-- `sac import` / `sac sync`：导入或同步数据时对整个数据集进行校验
-
-超出限制时，操作会被拒绝并显示错误信息。

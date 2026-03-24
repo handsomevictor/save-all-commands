@@ -1,77 +1,77 @@
-# 更新记录
+# Changelog
 
 ## v0.1.6 — 2026-03-23
 
-### 修复
+### Bug Fixes
 
-- **[致命] `sac install` 无法自动升级旧版 integration**：`write_integration()` 现在通过精确字符串匹配识别旧版 snippet 并自动移除后写入新版；无需用户手动编辑 rc 文件，`sac install` 一步完成升级
-- **[致命] 搜索输入 `/doc` 无结果**：修复 `effective_query()` — 在 Fuzzy 模式下自动剥去开头的单个 `/`，使 vim 风格的 `/` 激活搜索后查询词正确传递给匹配器；`/doc` → 实际查询 `doc`，`//doc` → Exact 模式（两个斜杠前缀行为不变）
+- **[Critical] `sac install` could not upgrade old shell integration automatically** — `write_integration()` now detects legacy snippets via exact string matching, removes them, and writes the current version in a single step. No manual rc-file editing required; `sac install` handles the full upgrade.
+- **[Critical] Searching `/doc` returned no results** — Fixed `effective_query()`: in Fuzzy mode the function now strips a single leading `/`, so the vim-style `/` activator no longer pollutes the query string. `/doc` → actual query `doc`; `//doc` → Exact mode (double-slash behavior unchanged).
 
 ---
 
 ## v0.1.5 — 2026-03-23
 
-### 修复
+### Bug Fixes
 
-- **[致命] `sac:zle: widgets can only be called when ZLE is active`**：完全重写 zsh/bash/fish shell integration
-  - 用 `[[ $# -eq 0 ]]` 门控 TUI 入口，其他参数直接 `command sac "$@"` passthrough（修复 `--version`、`add` 等子命令被错误捕获的问题）
-  - 用 tmpfile 方案（`command sac >"$tmp" 2>/dev/tty`）替代 `$()`，sac 进程运行在前台，ZLE 不再拦截 stdin
-  - 用 `if zle; then ... else print -z -- "$result"; fi` 检测 ZLE 上下文，安全设置 BUFFER / 调用 `zle redisplay`
-  - 新增 `# end sac shell integration` 结束标记；`sac install` 可检测旧格式并提示升级
-- **[致命] `Error: Failed to initialize input reader`**：移除 `dup2(tty_fd, STDIN_FILENO)` — kqueue 无法监听通过 dup2 替换的 `/dev/tty` fd；新 shell integration 使 stdin 在运行时已是真实 TTY，不再需要 dup2
-- **移除 `libc` 依赖**：dup2 方案废弃，`libc` crate 不再需要
+- **[Critical] `sac:zle: widgets can only be called when ZLE is active`** — Complete rewrite of zsh/bash/fish shell integration:
+  - Guard TUI entry with `[[ $# -eq 0 ]]`; all other argument forms pass through via `command sac "$@"` (fixes `--version`, `add`, and other sub-commands being incorrectly intercepted).
+  - Replace `$()` capture with a tmpfile approach (`command sac >"$tmp" 2>/dev/tty`): sac runs in the foreground, so ZLE cannot intercept stdin.
+  - Use `if zle; then ... else print -z -- "$result"; fi` to detect ZLE context before setting `BUFFER` or calling `zle redisplay`.
+  - Added `# end sac shell integration` terminator; `sac install` detects old-format snippets and prompts for upgrade.
+- **[Critical] `Error: Failed to initialize input reader`** — Removed `dup2(tty_fd, STDIN_FILENO)`. kqueue cannot watch a `/dev/tty` fd substituted via dup2. The new shell integration runs sac in the foreground, so stdin is already a real TTY and dup2 is unnecessary.
+- **Removed `libc` dependency** — dup2 approach abandoned; `libc` crate no longer needed.
 
 ---
 
 ## v0.1.4 — 2026-03-23
 
-### 修复
+### Bug Fixes
 
-- **`--version` 不可用**：clap `#[command]` 缺少 `version` 属性，现已补全，`sac --version` 正常输出版本号
-- **[致命] TUI 卡死（ZLE 冲突）**：将 `/dev/tty` 改为 `O_RDWR` 打开，并通过 `dup2` 将 stdin（fd 0）重定向到 `/dev/tty`；zsh ZLE 在 `$()` 子 shell 中持有 stdin，导致 `event::read()` 永久阻塞，dup2 后 stdin 直接指向终端设备，绕过 ZLE 拦截
-- **Ctrl+C 无法退出 TUI**：在浏览模式和搜索模式中均添加 `KeyModifiers::CONTROL + 'c'` 处理，按 Ctrl+C 立即退出并不输出任何命令
+- **`--version` flag not working** — `#[command]` was missing the `version` attribute on the clap struct. Added; `sac --version` now outputs the version string correctly.
+- **[Critical] TUI frozen (ZLE conflict)** — Opened `/dev/tty` with `O_RDWR` and used `dup2` to redirect stdin (fd 0) to `/dev/tty`. Under zsh's ZLE, `$()` sub-shells hold stdin through ZLE, causing `event::read()` to block indefinitely. After dup2, fd 0 pointed directly at the terminal device, bypassing ZLE.
+- **Ctrl+C could not exit the TUI** — Added `KeyModifiers::CONTROL + 'c'` handling in both Browse and Search modes; Ctrl+C now exits immediately without outputting any command.
 
 ---
 
 ## v0.1.3 — 2026-03-23
 
-### 修复
+### Bug Fixes
 
-- **[致命] 运行 `sac` 后终端卡死**：将 TUI 渲染后端从 `stderr` 改为直接打开 `/dev/tty`（同时将 cleanup 全部改为 `let _ =` 确保任何路径下都能恢复终端状态）
+- **[Critical] Terminal frozen after running `sac`** — Switched the TUI render backend from `stderr` to a directly-opened `/dev/tty` file handle. All cleanup paths changed to `let _ =` to guarantee terminal state is restored on any exit path.
 
 ---
 
 ## v0.1.2 — 2026-03-23
 
-### 变更
+### Changes
 
-- **TUI 统一编号**：移除 folder/command 分区 header 和分隔线，folder 和 command 混合排列，共享同一套 1-9/0 编号；选中 folder 则进入，选中 command 则填入终端
-- **层级约束改为合并上限**：每个 folder 下子 folder + command **合计**最多 10 个（原为各自独立最多 10 个），与 TUI 键位一一对应
-- **启动时自动修复重复 ID**：检测到 commands.toml 中存在重复 command id 时，自动按原有顺序重新分配 ID，打印警告后继续启动；结构性错误（超过 10 条限制）则打印错误信息后拒绝启动
+- **Unified TUI numbering** — Removed the separate folder/command section headers and dividers. Folders and commands share a single numbered list (`1`–`9`, `0`). Selecting a folder navigates into it; selecting a command pastes it into the terminal.
+- **Combined per-folder limit** — Each folder may contain at most **10 items total** (subfolders + commands), matching the available key slots. Previously subfolders and commands were counted independently.
+- **Auto-repair duplicate IDs on startup** — If `commands.toml` contains duplicate command IDs, `sac` reassigns them in order and prints a warning, then continues normally. Structural errors (exceeding the 10-item limit) still cause a hard exit with an error message.
 
-### 新增
+### New
 
-- `Store::auto_fix_ids()` 方法：检测并修复重复 command id，返回是否发生变更
-- 新增 test case：`test_validate_combined_limit_ok/exceeded`、`test_auto_fix_ids_no_duplicates`、`test_auto_fix_ids_with_duplicates`、`test_auto_fix_ids_all_same`（共 46 个测试全部通过）
+- `Store::auto_fix_ids()` — detects and repairs duplicate command IDs, returns whether any changes were made.
+- New test cases: `test_validate_combined_limit_ok/exceeded`, `test_auto_fix_ids_no_duplicates`, `test_auto_fix_ids_with_duplicates`, `test_auto_fix_ids_all_same` (46 total tests, all passing).
 
 ---
 
 ## v0.1.1 — 2026-03-23
 
-### 修复
+### Bug Fixes
 
-- **[致命] TUI 选中命令后直接执行而非填入输入栏**：将 TUI 后端从 `stdout` 改为 `stderr`，确保 shell integration 的 `result=$(command sac "$@" 2>/dev/tty)` 只捕获到纯命令文本，不再混入 TUI 转义码，彻底消除命令被意外执行的风险
+- **[Critical] Selected command executed directly instead of pasted into input bar** — Switched the TUI render backend from `stdout` to `stderr`. The shell integration's `result=$(command sac "$@" 2>/dev/tty)` then captures only the bare command text on stdout, eliminating the escape-code contamination that caused the command to be executed immediately.
 
 ---
 
 ## v0.1.0 — 2026-03-23
 
-### 新增
+### Initial Release
 
-- 数据层：Store（commands.toml 读写）、Config（config.toml 读写）
-- 搜索层：模糊搜索（nucleo-matcher 加权评分）、精确搜索（// 前缀触发）
-- TUI 层：浏览模式（树状 folder 导航）、搜索模式（实时过滤）
-- CLI 子命令：add、new-folder、edit、delete、sync、config、where、install、export、import
-- Shell Integration：zsh/bash/fish 三种 shell 支持，sac install 一键安装
-- 同步层：远端 HTTP 同步、diff 展示、用户确认写入
-- 完整测试套件：41 个测试用例，全部通过
+- **Data layer** — `Store` (commands.toml read/write), `Config` (config.toml read/write)
+- **Search layer** — fuzzy search (nucleo-matcher weighted scoring), exact search (`//` prefix)
+- **TUI layer** — Browse mode (tree-based folder navigation), Search mode (real-time filtering)
+- **CLI sub-commands** — `add`, `new-folder`, `edit`, `delete`, `sync`, `config`, `where`, `install`, `export`, `import`
+- **Shell integration** — zsh / bash / fish support; `sac install` one-command setup
+- **Sync layer** — remote HTTP sync, diff display, user-confirmed write
+- **Test suite** — 41 test cases, all passing
