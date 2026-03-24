@@ -58,28 +58,40 @@ impl Searcher {
             .commands
             .iter()
             .filter_map(|cmd| {
+                // Priority 0 (highest): any tag contains query (case-insensitive)
+                let tag_match = cmd
+                    .tags
+                    .iter()
+                    .any(|t| t.to_lowercase().contains(&query_lower));
                 // Priority 1: cmd contains query exactly (case-insensitive)
                 let cmd_exact = cmd.cmd.to_lowercase().contains(&query_lower);
                 // Priority 2: desc contains query exactly (case-insensitive)
                 let desc_exact = cmd.desc.to_lowercase().contains(&query_lower);
+                // Priority 3: comment contains query exactly
+                let comment_exact = cmd.comment.to_lowercase().contains(&query_lower);
 
-                // Priority 3: weighted fuzzy score
+                // Priority 4 (lowest): weighted fuzzy score
                 let fuzzy_score = self.weighted_fuzzy_score(cmd, &pattern);
 
                 // Only include if there's any match signal
-                if !cmd_exact && !desc_exact && fuzzy_score == 0 {
+                if !tag_match && !cmd_exact && !desc_exact && !comment_exact && fuzzy_score == 0 {
                     return None;
                 }
 
-                // Encode priority into score:
-                // Use a large base to separate priority tiers
-                // Tier 1 (cmd exact): score >= 3_000_000
-                // Tier 2 (desc exact): score >= 2_000_000
-                // Tier 3 (fuzzy only): score = fuzzy_score (up to ~1_000_000)
-                let base_score = if cmd_exact {
+                // Encode priority into score using large tier offsets:
+                // Tier 0 (tag match):   >= 4_000_000
+                // Tier 1 (cmd exact):   >= 3_000_000
+                // Tier 2 (desc exact):  >= 2_000_000
+                // Tier 3 (comment):     >= 1_500_000
+                // Tier 4 (fuzzy only):  fuzzy_score (up to ~1_000_000)
+                let base_score = if tag_match {
+                    4_000_000u32 + fuzzy_score
+                } else if cmd_exact {
                     3_000_000u32 + fuzzy_score
                 } else if desc_exact {
                     2_000_000u32 + fuzzy_score
+                } else if comment_exact {
+                    1_500_000u32 + fuzzy_score
                 } else {
                     fuzzy_score
                 };
@@ -138,19 +150,27 @@ impl Searcher {
                     cmd.comment,
                     cmd.tags.join(" ")
                 );
-                if haystack.to_lowercase().contains(&query_lower) {
-                    Some(SearchResult {
-                        command: cmd.clone(),
-                        score: 0,
-                        folder_path: store.breadcrumb(&cmd.folder),
-                    })
-                } else {
-                    None
+                if !haystack.to_lowercase().contains(&query_lower) {
+                    return None;
                 }
+                // Score: tag match = 3, cmd match = 2, desc/comment match = 1
+                let score = if cmd.tags.iter().any(|t| t.to_lowercase().contains(&query_lower)) {
+                    3u32
+                } else if cmd.cmd.to_lowercase().contains(&query_lower) {
+                    2
+                } else {
+                    1
+                };
+                Some(SearchResult {
+                    command: cmd.clone(),
+                    score,
+                    folder_path: store.breadcrumb(&cmd.folder),
+                })
             })
             .collect();
 
-        results.sort_by_key(|r| r.command.id);
+        // Higher score first; tie-break by id
+        results.sort_by(|a, b| b.score.cmp(&a.score).then_with(|| a.command.id.cmp(&b.command.id)));
         results
     }
 
