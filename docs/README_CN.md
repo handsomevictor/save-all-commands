@@ -11,6 +11,8 @@
 [![Shell](https://img.shields.io/badge/shell-zsh%20%7C%20bash%20%7C%20fish-yellow)](#)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/handsomevictor/save-all-commands/pulls)
 
+本项目由 [Claude Code](https://claude.ai/code) 从零开始编写
+
 [English README](../README.md)
 
 </div>
