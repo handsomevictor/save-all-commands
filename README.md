@@ -25,7 +25,9 @@
 
 ## What is sac?
 
-`sac` is a command manager with a fuzzy-searchable TUI. Search, select, and the command appears in your terminal input bar — ready to edit, never auto-executed. You stay in control of `{placeholder}` values and flags before pressing Enter.
+**Navigate like Vim, reach any command in seconds.** No retyping, no scrolling through notes — type a few fuzzy characters, select by number, and the full command appears in your command-line buffer instantly, ready to tweak and run.
+
+`sac` is a command manager with a fuzzy-searchable TUI. Select a command and it's pasted into your terminal input bar — never auto-executed. You stay in control of `{placeholder}` values and flags before pressing Enter.
 
 Two scenarios where it saves you:
 - You half-remember a `kubectl` command but not the exact flags — type a few chars, find it instantly, paste it.
