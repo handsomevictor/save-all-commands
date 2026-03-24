@@ -25,19 +25,11 @@
 
 ## What is sac?
 
-As a developer, you constantly face the same friction:
+`sac` is a command manager with a fuzzy-searchable TUI. Search, select, and the command appears in your terminal input bar — ready to edit, never auto-executed. You stay in control of `{placeholder}` values and flags before pressing Enter.
 
-- You know a `kubectl` command exists — but can never remember the exact flags
-- Your `docker run` incantation lives in a Slack message from six months ago
-- Shell aliases pile up in `.zshrc` and become impossible to search
-- Commands are scattered across Notion, Notes, GitHub Gists — with no unified lookup
-- Team-shared commands live in Confluence docs, disconnected from the terminal
-
-**`sac` solves this with a single principle:** every command you care about lives in one place, browsable and searchable in a fast TUI, with one keypress to paste it into your terminal input — _never executed blindly_.
-
-> **Why "paste, don't execute" matters**
->
-> Most command managers (including many `fzf` scripts) run the selected command immediately. `sac` deliberately does not: it writes the command text into your shell's input buffer (`BUFFER`), so you can edit `{placeholder}` values, review flags, and decide whether to run it at all. Zero accidental execution.
+Two scenarios where it saves you:
+- You half-remember a `kubectl` command but not the exact flags — type a few chars, find it instantly, paste it.
+- Your team's deployment scripts live in a Confluence doc — put them in `sac` once, accessible from any terminal in seconds.
 
 ---
 
