@@ -32,21 +32,19 @@ fn integration_snippet(shell_type: &ShellType) -> &'static str {
         ShellType::Zsh => concat!(
             "\n# sac shell integration — do not edit this block\n",
             "function sac() {\n",
-            "  emulate -L zsh\n",
             "  if [[ $# -eq 0 ]]; then\n",
-            "    local tmp\n",
+            "    local tmp result\n",
             "    tmp=$(mktemp) || return 1\n",
             "    command sac >\"$tmp\" 2>/dev/tty\n",
-            "    local result\n",
-            "    result=$(<\"$tmp\")\n",
+            "    { IFS='' read -r -d '' result; } < \"$tmp\"; result=${result%$'\\n'}\n",
             "    rm -f -- \"$tmp\"\n",
             "    [[ -z \"$result\" ]] && return\n",
             "    if zle; then\n",
-            "      BUFFER=$result\n",
-            "      CURSOR=${#BUFFER}\n",
-            "      zle redisplay\n",
+            "      LBUFFER=$result\n",
+            "      RBUFFER=''\n",
+            "      zle reset-prompt\n",
             "    else\n",
-            "      print -z -- \"$result\"\n",
+            "      print -rz -- \"$result\"\n",
             "    fi\n",
             "  else\n",
             "    command sac \"$@\"\n",
@@ -61,7 +59,7 @@ fn integration_snippet(shell_type: &ShellType) -> &'static str {
             "    local tmp result\n",
             "    tmp=$(mktemp) || return 1\n",
             "    command sac >\"$tmp\" 2>/dev/tty\n",
-            "    result=$(<\"$tmp\")\n",
+            "    { IFS='' read -r -d '' result; } < \"$tmp\"; result=${result%$'\\n'}\n",
             "    rm -f -- \"$tmp\"\n",
             "    [[ -z \"$result\" ]] && return\n",
             "    READLINE_LINE=$result\n",
@@ -92,12 +90,38 @@ fn integration_snippet(shell_type: &ShellType) -> &'static str {
     }
 }
 
-// The exact text written by the previous (broken) version of sac install.
-// Used for auto-upgrade detection and removal.
+// Old snippets used by previous versions — detected and auto-upgraded by sac install.
 const OLD_ZSH_BASH_SNIPPET: &str = concat!(
     "\n# sac shell integration\n",
     "function sac() { local result; result=$(command sac \"$@\" 2>/dev/tty); ",
     "if [[ -n \"$result\" ]]; then BUFFER=\"$result\"; zle redisplay; fi }\n",
+);
+
+// v0.1.5 zsh snippet (used $(<file) + BUFFER + zle redisplay — loses backslashes)
+const OLD_ZSH_V015_SNIPPET: &str = concat!(
+    "\n# sac shell integration — do not edit this block\n",
+    "function sac() {\n",
+    "  emulate -L zsh\n",
+    "  if [[ $# -eq 0 ]]; then\n",
+    "    local tmp\n",
+    "    tmp=$(mktemp) || return 1\n",
+    "    command sac >\"$tmp\" 2>/dev/tty\n",
+    "    local result\n",
+    "    result=$(<\"$tmp\")\n",
+    "    rm -f -- \"$tmp\"\n",
+    "    [[ -z \"$result\" ]] && return\n",
+    "    if zle; then\n",
+    "      BUFFER=$result\n",
+    "      CURSOR=${#BUFFER}\n",
+    "      zle redisplay\n",
+    "    else\n",
+    "      print -z -- \"$result\"\n",
+    "    fi\n",
+    "  else\n",
+    "    command sac \"$@\"\n",
+    "  fi\n",
+    "}\n",
+    "# end sac shell integration\n",
 );
 
 const OLD_FISH_SNIPPET: &str = concat!(
@@ -116,6 +140,7 @@ const OLD_FISH_SNIPPET: &str = concat!(
 fn strip_old_integration(content: &str) -> String {
     content
         .replace(OLD_ZSH_BASH_SNIPPET, "")
+        .replace(OLD_ZSH_V015_SNIPPET, "")
         .replace(OLD_FISH_SNIPPET, "")
 }
 
@@ -134,8 +159,8 @@ pub fn write_integration(shell_type: &ShellType) -> Result<()> {
         String::new()
     };
 
-    // Already up to date
-    if existing.contains("# end sac shell integration") {
+    // Already up to date: must have the end marker AND the read-r signature of the current version.
+    if existing.contains("# end sac shell integration") && existing.contains("read -r -d ''") {
         println!("Shell integration already installed in {}", rc_path.display());
         return Ok(());
     }

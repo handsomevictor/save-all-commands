@@ -192,3 +192,104 @@ fn test_save_load_roundtrip() {
     assert_eq!(loaded.commands[0].tags, vec!["git"]);
     assert_eq!(loaded.commands[0].comment, "useful");
 }
+
+#[test]
+fn test_cmd_backslash_roundtrip() {
+    use sac::store::{Command, Folder, Store};
+    use tempfile::NamedTempFile;
+
+    let original_cmd = "curl -X POST \"https://example.com\" \\\n  -H \"accept: application/json\" \\\n  -d '{\"key\": \"value\"}'".to_string();
+
+    let mut store = Store::default();
+    store.folders.push(Folder { id: "test".to_string(), parent: "".to_string(), name: "Test".to_string() });
+    store.commands.push(Command {
+        id: 1, folder: "test".to_string(),
+        cmd: original_cmd.clone(),
+        desc: "test".to_string(), comment: "".to_string(),
+        tags: vec![], last_used: "".to_string(),
+    });
+
+    let tmp = NamedTempFile::new().unwrap();
+    store.save_to(tmp.path()).unwrap();
+
+    let saved_toml = std::fs::read_to_string(tmp.path()).unwrap();
+    eprintln!("=== Saved TOML ===\n{}", saved_toml);
+
+    let reloaded = Store::load_from(tmp.path()).unwrap();
+    let reloaded_cmd = &reloaded.commands[0].cmd;
+
+    eprintln!("=== Original ===\n{}", original_cmd);
+    eprintln!("=== Reloaded ===\n{}", reloaded_cmd);
+
+    assert_eq!(*reloaded_cmd, original_cmd, "backslashes must survive save/load round-trip");
+}
+
+#[test]
+fn test_cmd_output_bytes() {
+    use sac::store::Store;
+    let store = Store::load().unwrap();
+    let cmd = store.commands.iter()
+        .find(|c| c.cmd.contains("orderbookl2"))
+        .expect("command not found");
+    eprintln!("=== cmd string (escaped) ===");
+    eprintln!("{:?}", cmd.cmd);
+    eprintln!("=== cmd string (display) ===");
+    eprintln!("{}", cmd.cmd);
+    // Verify backslash is present
+    assert!(cmd.cmd.contains('\\'), "cmd must contain backslash");
+}
+
+#[test]
+fn test_cmd_stdout_bytes() {
+    use sac::store::Store;
+    use std::io::Write;
+    let store = Store::load().unwrap();
+    let cmd = store.commands.iter()
+        .find(|c| c.cmd.contains("orderbookl2"))
+        .expect("command not found");
+    
+    // Exactly what main.rs does: print!("{}", cmd)
+    let output = format!("{}", cmd.cmd);
+    
+    // Check backslash is present
+    let backslash_count = output.chars().filter(|&c| c == '\\').count();
+    eprintln!("Backslash count in output: {}", backslash_count);
+    eprintln!("First 80 chars: {:?}", &output[..80.min(output.len())]);
+    
+    assert!(backslash_count > 0, "output must contain backslashes, got: {:?}", output);
+    
+    // Write to a tmpfile and read back (simulates shell pipeline)
+    let tmp = tempfile::NamedTempFile::new().unwrap();
+    write!(tmp.as_file(), "{}", cmd.cmd).unwrap();
+    
+    let tmpfile_content = std::fs::read_to_string(tmp.path()).unwrap();
+    let tmpfile_backslashes = tmpfile_content.chars().filter(|&c| c == '\\').count();
+    eprintln!("Backslash count in tmpfile: {}", tmpfile_backslashes);
+    assert_eq!(backslash_count, tmpfile_backslashes, "tmpfile must have same backslash count");
+}
+
+#[test]
+fn test_save_produces_correct_toml() {
+    use sac::store::Store;
+    use tempfile::NamedTempFile;
+
+    let store = Store::load().unwrap();
+    let tmp = NamedTempFile::new().unwrap();
+    store.save_to(tmp.path()).unwrap();
+
+    let saved = std::fs::read_to_string(tmp.path()).unwrap();
+    
+    // Find the cmd section for orderbookl2
+    let start = saved.find("orderbookl2").expect("command not found");
+    // Show 200 chars around it
+    let begin = start.saturating_sub(50);
+    let end = (start + 300).min(saved.len());
+    eprintln!("=== Saved TOML around orderbookl2 ===\n{}", &saved[begin..end]);
+    
+    // Re-load and check backslashes
+    let reloaded = Store::load_from(tmp.path()).unwrap();
+    let cmd = reloaded.commands.iter().find(|c| c.cmd.contains("orderbookl2")).unwrap();
+    let bs = cmd.cmd.chars().filter(|&c| c == '\\').count();
+    eprintln!("Backslash count after reload: {}", bs);
+    assert!(bs > 0, "backslashes must survive save");
+}
