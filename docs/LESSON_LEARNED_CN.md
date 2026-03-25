@@ -106,6 +106,44 @@ Shell integration 已通过 `2>/dev/tty` 将 stderr 重定向到真实终端，T
 
 ---
 
+## [2026-03-25] 致命：$(<file) + emulate -L zsh 在 ZLE 上下文中吞掉 \<换行>
+
+**现象**：包含 `\<换行>`（行延续语法，例如 `curl -X POST "..." \`）的命令，在 TUI 中选中后粘贴到终端，反斜杠全部丢失，多行命令变成了一行且没有 `\`。
+
+**原因**：zsh snippet 中存在两个叠加问题：
+1. `result=$(<"$tmp")` — 即使在 `emulate -L zsh` 下，zsh 在命令替换期间仍会将 `\<换行>` 视为行延续序列，静默地去掉反斜杠并将前后两行合并。
+2. `BUFFER=$result` + `zle redisplay` — 在某些 zsh 版本中，直接向 `BUFFER` 赋值并调用 `zle redisplay` 可能触发 ZLE 对字符串内容的二次解析，造成额外的转义处理。
+
+**解决**：组合应用四项修改：
+- `{ IFS='' read -r -d '' result; } < "$tmp"` — `read -r` 在 shell 层面完全禁用反斜杠转义处理；`read -d ''` 读取直到 EOF 而不是换行符。这是 zsh/bash 中二进制安全读取文件内容的标准模式。
+- `LBUFFER=$result; RBUFFER=''` — 通过 `LBUFFER`/`RBUFFER`（编辑缓冲区的左右两部分）赋值，而不是直接操作 `BUFFER`，绕过 BUFFER 级别的 ZLE 再解析。
+- `zle reset-prompt` 替代 `zle redisplay` — `reset-prompt` 只重绘 prompt 行，不触发 ZLE 对 buffer 内容的再次处理。
+- `print -rz` 替代 `print -z`（非 ZLE 路径）— `-r` 标志禁用 `print` 的转义处理，与 `read -r` 读取端的保证保持一致。
+- 移除 `emulate -L zsh` — 该选项并非必要，且会创建一个与字符串处理产生不可预测交互的副作用环境。
+
+```zsh
+# 修复前（错误）
+result=$(<"$tmp")
+BUFFER=$result
+CURSOR=${#BUFFER}
+zle redisplay
+
+# 修复后
+{ IFS='' read -r -d '' result; } < "$tmp"; result=${result%$'\n'}
+LBUFFER=$result
+RBUFFER=''
+zle reset-prompt
+```
+
+**教训**：任何读取文件内容并设置 ZLE buffer 的 shell 函数：
+- 必须使用 `read -r`，防止反斜杠被解释。`$(<file)` 对任意内容并不安全。
+- 优先使用 `LBUFFER`/`RBUFFER` 而非直接操作 `BUFFER`，避免 ZLE 再解析副作用。
+- 视觉刷新应使用 `zle reset-prompt` 而非 `zle redisplay`。
+- 向 history/next-prompt buffer 写入内容时使用 `print -rz`（不加 `-r` 不安全）。
+- 用包含 `\`、`\\`、`\n`、`\ `（反斜杠+空格）的命令进行测试——这些字符最容易被 shell 字符串处理静默篡改。
+
+---
+
 ## [2026-03-23] Style 类型实现了 Copy，不应调用 clone()
 
 **现象**：`meta_style.clone()` 触发 clippy `clone_on_copy` warning。

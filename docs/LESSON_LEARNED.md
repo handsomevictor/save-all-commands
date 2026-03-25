@@ -104,6 +104,44 @@ let backend = CrosstermBackend::new(stderr);
 
 ---
 
+## [2026-03-25] Critical: `$(<file)` + `emulate -L zsh` strips `\<newline>` in ZLE context
+
+**Symptom:** Commands containing `\<newline>` (line-continuation syntax, e.g. `curl -X POST "..." \`) were pasted into the terminal with all backslashes removed. Commands appeared on one line with no `\` characters.
+
+**Root cause:** Two compounding issues in the zsh snippet:
+1. `result=$(<"$tmp")` — even under `emulate -L zsh`, zsh processes `\<newline>` as a line-continuation sequence during command substitution, silently stripping the backslash and joining the lines.
+2. `BUFFER=$result` + `zle redisplay` — assigning to `BUFFER` and calling `zle redisplay` can trigger ZLE to re-parse the string content in certain zsh builds, causing additional escape processing.
+
+**Fix:** Four changes applied in combination:
+- `{ IFS='' read -r -d '' result; } < "$tmp"` — `read -r` explicitly disables all backslash escape processing at the shell level; `read -d ''` reads until EOF rather than a newline. This is the gold-standard pattern for binary-safe file reading in zsh/bash.
+- `LBUFFER=$result; RBUFFER=''` — assign to `LBUFFER`/`RBUFFER` (the left and right portions of the edit buffer) instead of `BUFFER` directly. This bypasses BUFFER-level ZLE re-parsing.
+- `zle reset-prompt` instead of `zle redisplay` — `reset-prompt` redraws only the prompt line; it does not trigger ZLE to re-process the buffer contents.
+- `print -rz` instead of `print -z` (non-ZLE path) — the `-r` flag disables escape processing in `print`, matching the `read -r` guarantee on the read side.
+- Removed `emulate -L zsh` — not needed and creates a side-effect environment that interacts unpredictably with string processing.
+
+```zsh
+# Before (broken)
+result=$(<"$tmp")
+BUFFER=$result
+CURSOR=${#BUFFER}
+zle redisplay
+
+# After (fixed)
+{ IFS='' read -r -d '' result; } < "$tmp"; result=${result%$'\n'}
+LBUFFER=$result
+RBUFFER=''
+zle reset-prompt
+```
+
+**Lesson:** For any shell function that reads file contents and sets ZLE buffer state:
+- Always use `read -r` to prevent backslash interpretation. `$(<file)` is not safe for arbitrary content.
+- Prefer `LBUFFER`/`RBUFFER` over `BUFFER` to avoid ZLE re-parsing side-effects.
+- Use `zle reset-prompt` rather than `zle redisplay` when you only want a visual refresh.
+- Use `print -rz` (not `print -z`) to place content into the history/next-prompt buffer.
+- Test with commands containing `\`, `\\`, `\n`, and `\<space>` — these are the characters most likely to be silently mangled by shell string processing.
+
+---
+
 ## [2026-03-23] `Style` implements `Copy` — unnecessary `.clone()` call
 
 **Symptom:** `meta_style.clone()` triggered a `clone_on_copy` clippy warning.

@@ -1,5 +1,14 @@
 # 更新记录
 
+## v0.1.7 — 2026-03-25
+
+### 修复
+
+- **[致命] 多行命令粘贴到终端后反斜杠丢失**：包含 `\<换行>`（行延续语法）的命令在 TUI 选中后，粘贴结果中反斜杠全部消失。根本原因：(1) `result=$(<"$tmp")` 即使在 `emulate -L zsh` 下也会将 `\<换行>` 视为行延续并去除反斜杠；(2) `BUFFER=$result` + `zle redisplay` 可能触发 ZLE 对字符串的再次解析。修复：改用 `{ IFS='' read -r -d '' result; } < "$tmp"`（显式 `-r` 在 shell 层完全禁用反斜杠转义处理）；用 `LBUFFER`/`RBUFFER` 替代 `BUFFER`（绕过 BUFFER 级别的 ZLE 处理）；用 `zle reset-prompt` 替代 `zle redisplay`；在 ZLE 上下文外用 `print -rz` 替代 `print -z`；移除 `emulate -L zsh`。
+- **`sac install` 无法自动升级 v0.1.5 用户**："已安装"检测只检查 `# end sac shell integration` 标记，而该标记在新旧版本中均存在。新增第二个检测条件：`read -r -d ''` 也必须存在。新增 `OLD_ZSH_V015_SNIPPET` 常量并将其加入 `strip_old_integration()`，实现完整的自动升级覆盖。
+
+---
+
 ## v0.1.6 — 2026-03-23
 
 ### 修复

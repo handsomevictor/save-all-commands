@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.1.7 — 2026-03-25
+
+### Bug Fixes
+
+- **[Critical] Backslashes stripped from multi-line commands when pasted into terminal** — Commands containing `\<newline>` (line-continuation syntax) lost their backslashes after selection. Root causes: (1) `result=$(<"$tmp")` treats `\<newline>` as a line continuation even with `emulate -L zsh`; (2) `BUFFER=$result` + `zle redisplay` can trigger ZLE re-parsing of the string. Fix: switch to `{ IFS='' read -r -d '' result; } < "$tmp"` (explicit `-r` disables all backslash escape processing at the shell level); use `LBUFFER`/`RBUFFER` instead of `BUFFER` (bypasses BUFFER-level ZLE processing); use `zle reset-prompt` instead of `zle redisplay`; use `print -rz` instead of `print -z` when outside ZLE context; remove `emulate -L zsh`.
+- **`sac install` did not auto-upgrade v0.1.5 users** — The "already installed" check only looked for `# end sac shell integration`, which was present in both old and new snippets. Added a second condition: `read -r -d ''` must also be present. Added `OLD_ZSH_V015_SNIPPET` constant and included it in `strip_old_integration()` for full auto-upgrade coverage.
+
+---
+
 ## v0.1.6 — 2026-03-23
 
 ### Bug Fixes
