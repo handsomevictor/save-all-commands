@@ -20,8 +20,13 @@
 ---
 
 <div align="center">
-<img src="assets/screenshot.png" alt="sac TUI 界面" width="720">
+<img src="docs/assets/screenshot.png" alt="sac TUI interface" width="720">
 </div>
+
+<div align="center">
+<img src="docs/assets/screenshot2.png" alt="sac TUI interface" width="720">
+</div>
+
 
 ---
 
