@@ -20,11 +20,11 @@
 ---
 
 <div align="center">
-<img src="assets/screenshot.png" alt="sac TUI interface" width="720">
+<img src="assets/screenshot2.png" alt="sac TUI interface" width="720">
 </div>
 
 <div align="center">
-<img src="assets/screenshot2.png" alt="sac TUI interface" width="720">
+<img src="assets/screenshot.png" alt="sac TUI interface" width="720">
 </div>
 
 
